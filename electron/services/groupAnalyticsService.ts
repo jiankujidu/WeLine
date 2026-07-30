@@ -1674,7 +1674,7 @@ class GroupAnalyticsService {
       const exportDate = new Date()
       const exportTime = this.formatDateTime(exportDate)
       const exportVersion = '0.0.2'
-      const exportGenerator = 'WeFlow'
+      const exportGenerator = 'WeLine'
       const exportPlatform = 'wechat'
 
       const groupDisplay = await wcdbService.getDisplayNames([normalizedChatroomId, normalizedMemberUsername])
@@ -1831,7 +1831,7 @@ class GroupAnalyticsService {
       const exportDate = new Date()
       const exportTime = this.formatDateTime(exportDate)
       const exportVersion = '0.0.2'
-      const exportGenerator = 'WeFlow'
+      const exportGenerator = 'WeLine'
       const exportPlatform = 'wechat'
 
       const groupDisplay = await wcdbService.getDisplayNames([chatroomId])

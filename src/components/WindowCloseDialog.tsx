@@ -54,7 +54,7 @@ export default function WindowCloseDialog({
 
         <div className="window-close-dialog-header">
           <span className="window-close-dialog-kicker">退出行为</span>
-          <h2 id="window-close-dialog-title">关闭 WeFlow</h2>
+          <h2 id="window-close-dialog-title">关闭 WeLine</h2>
           <p>
             {canMinimizeToTray
               ? '你可以保留后台进程与本地 API，或者直接完全退出应用。'
@@ -89,7 +89,7 @@ export default function WindowCloseDialog({
             </span>
             <span className="window-close-dialog-option-text">
               <strong>完全关闭</strong>
-              <span>结束 WeFlow 进程，并停止当前保留的本地 API。</span>
+              <span>结束 WeLine 进程，并停止当前保留的本地 API。</span>
             </span>
           </button>
         </div>

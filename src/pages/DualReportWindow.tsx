@@ -684,7 +684,7 @@ function DualReportWindow() {
               <h1 className="reveal-inner extract-title delay-1">ARCHIVED</h1>
             </div>
             <div className="reveal-wrap">
-              <p className="reveal-inner desc delay-2">WeFlow</p>
+              <p className="reveal-inner desc delay-2">WeLine</p>
             </div>
             <div className="reveal-wrap">
               <button 

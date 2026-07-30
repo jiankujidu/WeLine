@@ -847,7 +847,7 @@ class SnsService {
 
     private getSnsCacheDir(): string {
         const configuredCachePath = String(this.configService.get('cachePath') || '').trim()
-        const baseDir = configuredCachePath || join(app.getPath('documents'), 'WeFlow')
+        const baseDir = configuredCachePath || join(app.getPath('documents'), 'WeLine')
         const snsCacheDir = join(baseDir, 'sns_cache')
         if (!existsSync(snsCacheDir)) {
             mkdirSync(snsCacheDir, { recursive: true })
@@ -857,7 +857,7 @@ class SnsService {
 
     private getEmojiCacheDir(): string {
         const configuredCachePath = String(this.configService.get('cachePath') || '').trim()
-        const baseDir = configuredCachePath || join(app.getPath('documents'), 'WeFlow')
+        const baseDir = configuredCachePath || join(app.getPath('documents'), 'WeLine')
         const emojiDir = join(baseDir, 'Emojis')
         if (!existsSync(emojiDir)) {
             mkdirSync(emojiDir, { recursive: true })
@@ -1906,7 +1906,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 <div class="container">
     <div class="feed-hd"><h2>朋友圈</h2><span class="info">共 ${posts.length} 条${filterInfo ? ` · ${filterInfo}` : ''}</span></div>
     ${postsHtml}
-    <div class="ft">由 WeFlow 导出 · ${new Date().toLocaleString('zh-CN')}</div>
+    <div class="ft">由 WeLine 导出 · ${new Date().toLocaleString('zh-CN')}</div>
 </div>
 <div class="lb" id="lb" onclick="closeLb()"><img id="lbi" src=""></div>
 <button class="btt" id="btt" onclick="scrollTo({top:0,behavior:'smooth'})">↑</button>

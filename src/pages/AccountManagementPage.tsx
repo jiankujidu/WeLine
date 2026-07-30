@@ -565,7 +565,7 @@ function AccountManagementPage() {
       )}
 
       <footer className="account-management-footer">
-        删除仅影响 WeFlow 本地配置，不会删除微信原始数据文件。
+        删除仅影响 WeLine 本地配置，不会删除微信原始数据文件。
       </footer>
     </div>
   )

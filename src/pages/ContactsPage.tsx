@@ -1115,6 +1115,7 @@ function ContactsPage() {
                             <div className="detail-row"><span className="detail-label">昵称</span><span className="detail-value">{selectedContact.nickname || selectedContact.displayName}</span></div>
                             {selectedContact.remark && <div className="detail-row"><span className="detail-label">备注</span><span className="detail-value">{selectedContact.remark}</span></div>}
                             {selectedContact.alias && <div className="detail-row"><span className="detail-label">微信号</span><span className="detail-value">{selectedContact.alias}</span></div>}
+                            {selectedContact.phone && <div className="detail-row"><span className="detail-label">电话</span><span className="detail-value">{selectedContact.phone}</span></div>}
                             {selectedContact.labels && selectedContact.labels.length > 0 && (
                                 <div className="detail-row"><span className="detail-label">标签</span><span className="detail-value">{selectedContact.labels.join('、')}</span></div>
                             )}

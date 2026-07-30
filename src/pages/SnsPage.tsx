@@ -2207,7 +2207,7 @@ export default function SnsPage() {
 
                         {/* 说明 */}
                         <div className="sns-protect-desc">
-                            启用后，WeFlow将拦截朋友圈删除操作<br/>已同步的动态不会从本地数据库中消失<br/>新的动态仍可正常同步。
+                            启用后，WeLine将拦截朋友圈删除操作<br/>已同步的动态不会从本地数据库中消失<br/>新的动态仍可正常同步。
                         </div>
 
                         {/* 操作反馈 */}

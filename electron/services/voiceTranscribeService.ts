@@ -91,7 +91,7 @@ export class VoiceTranscribeService {
   private resolveModelDir(): string {
     const configured = this.configService.get('whisperModelDir') as string | undefined
     if (configured) return configured
-    return join(app.getPath('documents'), 'WeFlow', 'models', 'sensevoice')
+    return join(app.getPath('documents'), 'WeLine', 'models', 'sensevoice')
   }
 
   private resolveModelPath(fileName: string): string {

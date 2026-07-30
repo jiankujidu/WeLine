@@ -1883,7 +1883,7 @@ class ExportService {
   private async ensureConnected(): Promise<{ success: boolean; cleanedWxid?: string; error?: string }> {
     const wxid = this.getConfiguredMyWxid()
     const dbPath = this.getConfiguredDbPath()
-    const decryptKey = String(this.runtimeConfig?.decryptKey || this.configService.get('decryptKey') || '').trim()
+    const decryptKey = String(this.runtimeConfig?.decryptKey || this.configService.getDecryptKeyForWxid(wxid) || '').trim()
     if (!wxid) return { success: false, error: '请先在设置页面配置微信ID' }
     if (!dbPath) return { success: false, error: '请先在设置页面配置数据库路径' }
     if (!decryptKey) return { success: false, error: '请先在设置页面配置解密密钥' }
@@ -6269,7 +6269,7 @@ class ExportService {
     return {
       version: '1.0.3',
       exportedAt: Math.floor(Date.now() / 1000),
-      generator: 'WeFlow'
+      generator: 'WeLine'
     }
   }
 
@@ -6286,7 +6286,7 @@ class ExportService {
       chatlab: {
         version: '0.0.2',
         exportedAt: Math.floor(Date.now() / 1000),
-        generator: 'WeFlow'
+        generator: 'WeLine'
       },
       meta: {
         name: sessionInfo.displayName,
@@ -7663,7 +7663,7 @@ class ExportService {
 
       // 创建 Excel 工作簿
       const workbook = new ExcelJS.Workbook()
-      workbook.creator = 'WeFlow'
+      workbook.creator = 'WeLine'
       workbook.created = new Date()
 
       const worksheet = workbook.addWorksheet('聊天记录')
@@ -8220,7 +8220,7 @@ class ExportService {
 
       appendRow(['会话信息'])
       appendRow(['微信ID', sessionId, '昵称', sessionInfo.displayName || sessionId])
-      appendRow(['导出工具', 'WeFlow', '导出时间', this.formatTimestamp(Math.floor(Date.now() / 1000))])
+      appendRow(['导出工具', 'WeLine', '导出时间', this.formatTimestamp(Math.floor(Date.now() / 1000))])
       appendRow([])
       appendRow(useCompactColumns
         ? ['序号', '时间', '发送者身份', '消息类型', '内容']

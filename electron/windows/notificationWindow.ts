@@ -116,7 +116,7 @@ export async function showNotification(data: any) {
   const filterMode = config.get("notificationFilterMode") || "all";
   const filterList = config.get("notificationFilterList") || [];
   const sessionId = typeof data.sessionId === "string" ? data.sessionId : "";
-  // 系统通知（如 "WeFlow 准备就绪"）不是聊天消息，不应受会话白/黑名单影响
+  // 系统通知（如 "WeLine 准备就绪"）不是聊天消息，不应受会话白/黑名单影响
   const isSystemNotification = sessionId.startsWith("weflow-");
 
   if (!isSystemNotification && filterMode !== "all") {

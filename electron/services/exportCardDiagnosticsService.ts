@@ -286,7 +286,7 @@ export class ExportCardDiagnosticsService {
     }
 
     const lines: string[] = []
-    lines.push('WeFlow 导出卡片诊断摘要')
+    lines.push('WeLine 导出卡片诊断摘要')
     lines.push(`生成时间: ${new Date().toLocaleString('zh-CN')}`)
     lines.push(`日志总数: ${total}`)
     lines.push(`来源统计: frontend=${frontendCount}, main=${mainCount}, backend=${backendCount}, worker=${workerCount}`)

@@ -1,6 +1,6 @@
-# WeFlow HTTP API / Push 文档
+# WeLine HTTP API / Push 文档
 
-WeFlow 提供本地 HTTP API（已支持GET 和 POST请求），便于外部脚本或工具读取聊天记录、会话、联系人、群成员和导出的媒体文件；也支持在检测到新消息后通过固定 SSE 地址主动推送消息事件。
+WeLine 提供本地 HTTP API（已支持GET 和 POST请求），便于外部脚本或工具读取聊天记录、会话、联系人、群成员和导出的媒体文件；也支持在检测到新消息后通过固定 SSE 地址主动推送消息事件。
 
 ## 启用方式
 
@@ -11,7 +11,7 @@ WeFlow 提供本地 HTTP API（已支持GET 和 POST请求），便于外部脚�
 - 基础地址：`http://127.0.0.1:5031`
 - 可选开启 `主动推送`，检测到新收到的消息后会通过 `GET /api/v1/push/messages` 推送给 SSE 订阅端
 
-**状态记忆**：API 服务和主动推送的状态及端口会自动保存，重启 WeFlow 后会自动恢复运行。
+**状态记忆**：API 服务和主动推送的状态及端口会自动保存，重启 WeLine 后会自动恢复运行。
 
 ## 鉴权规范
 
@@ -188,7 +188,7 @@ curl "http://127.0.0.1:5031/api/v1/messages?talker=xxx@chatroom&media=1&image=1&
   "hasMore": true,
   "media": {
     "enabled": true,
-    "exportPath": "C:\\Users\\Alice\\Documents\\WeFlow\\api-media",
+    "exportPath": "C:\\Users\\Alice\\Documents\\WeLine\\api-media",
     "count": 1
   },
   "messages": [
@@ -213,7 +213,7 @@ curl "http://127.0.0.1:5031/api/v1/messages?talker=xxx@chatroom&media=1&image=1&
       "mediaType": "image",
       "mediaFileName": "abc123.jpg",
       "mediaUrl": "http://127.0.0.1:5031/api/v1/media/xxx@chatroom/images/abc123.jpg",
-      "mediaLocalPath": "C:\\Users\\Alice\\Documents\\WeFlow\\api-media\\xxx@chatroom\\images\\abc123.jpg"
+      "mediaLocalPath": "C:\\Users\\Alice\\Documents\\WeLine\\api-media\\xxx@chatroom\\images\\abc123.jpg"
     }
   ]
 }
@@ -371,7 +371,7 @@ GET /api/v1/sessions/:id/messages
   "chatlab": {
     "version": "0.0.2",
     "exportedAt": 1738713600,
-    "generator": "WeFlow"
+    "generator": "WeLine"
   },
   "meta": {
     "name": "项目群",
@@ -416,7 +416,7 @@ GET /api/v1/sessions/:id/messages
 | `nextOffset` | 下次请求的 `offset` 值           |
 | `watermark`  | 本次拉取的时间上界（秒级时间戳） |
 
-**ChatLab 对接方式**：在 ChatLab 设置中添加远程数据源，`baseUrl` 填 `http://127.0.0.1:5031/api/v1`，Token 填 WeFlow 中配置的 API Token。
+**ChatLab 对接方式**：在 ChatLab 设置中添加远程数据源，`baseUrl` 填 `http://127.0.0.1:5031/api/v1`，Token 填 WeLine 中配置的 API Token。
 
 ---
 
@@ -776,7 +776,7 @@ members = requests.get(
 ## 10. 注意事项
 
 1. API 仅监听本机 `127.0.0.1`，不对外网开放。
-2. 使用前需要先在 WeFlow 中完成数据库连接。
+2. 使用前需要先在 WeLine 中完成数据库连接。
 3. `start` 和 `end` 支持 `YYYYMMDD` 与时间戳；纯 `YYYYMMDD` 的 `end` 会扩展到当天 `23:59:59`。
 4. 群成员的 `groupNickname` 依赖微信源数据；源数据缺失时不会自动补出。
 5. 媒体访问链接只有在对应消息已经通过 `media=1` 导出后才可访问。

@@ -64,7 +64,7 @@ function BackupPage() {
       const result = await window.electronAPI.dialog.saveFile({
         title: '保存数据库备份',
         defaultPath,
-        filters: [{ name: 'WeFlow 数据库备份', extensions: hasResources ? ['tar'] : ['gz'] }]
+        filters: [{ name: 'WeLine 数据库备份', extensions: hasResources ? ['tar'] : ['gz'] }]
       })
       if (result.canceled || !result.filePath) {
         setMessage('已取消')
@@ -101,7 +101,7 @@ function BackupPage() {
         title: '选择数据库备份',
         properties: ['openFile'],
         filters: [
-          { name: 'WeFlow 数据库备份', extensions: ['tar', 'gz', 'tgz'] },
+          { name: 'WeLine 数据库备份', extensions: ['tar', 'gz', 'tgz'] },
           { name: '所有文件', extensions: ['*'] }
         ]
       })

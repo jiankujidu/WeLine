@@ -392,7 +392,7 @@ class AnalyticsService {
   }
 
   private getCacheFilePath(): string {
-    return join(app.getPath('documents'), 'WeFlow', 'analytics_cache.json')
+    return join(app.getPath('documents'), 'WeLine', 'analytics_cache.json')
   }
 
   private async loadCacheFromFile(): Promise<{ key: string; data: any; updatedAt: number } | null> {

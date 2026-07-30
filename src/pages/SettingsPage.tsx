@@ -65,7 +65,7 @@ const aiTabs: Array<{ id: Extract<SettingsTab, 'aiCommon' | 'insight' | 'aiFootp
 const isMac = navigator.userAgent.toLowerCase().includes('mac')
 const isLinux = navigator.userAgent.toLowerCase().includes('linux')
 const isWindows = !isMac && !isLinux
-const MAC_KEY_FAQ_URL = 'https://github.com/hicccc77/WeFlow/blob/main/docs/MAC-KEY-FAQ.md'
+const MAC_KEY_FAQ_URL = 'https://github.com/jiankujidu/WeLine/blob/main/docs/MAC-KEY-FAQ.md'
 
 const dbDirName = isMac ? '2.0b4.0.9 目录' : 'xwechat_files 目录'
 const dbPathPlaceholder = isMac
@@ -1746,7 +1746,7 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
         <label>开机自启动</label>
         <span className="form-hint">
           {launchAtStartupSupported
-            ? '开启后，登录系统时会自动启动 WeFlow。'
+            ? '开启后，登录系统时会自动启动 WeLine。'
             : launchAtStartupReason || '当前环境暂不支持开机自启动。'}
         </span>
         <div className="log-toggle-line">
@@ -2155,7 +2155,7 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
         <div className="anti-revoke-hero">
           <div className="anti-revoke-hero-main">
             <h3>防撤回</h3>
-            <p>你可以根据会话进行防撤回部署，安装后无需保持 WeFlow 运行即可实现防撤回</p>
+            <p>你可以根据会话进行防撤回部署，安装后无需保持 WeLine 运行即可实现防撤回</p>
           </div>
           <div className="anti-revoke-metrics">
             <div className="anti-revoke-metric is-total">
@@ -2648,7 +2648,7 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
               wordBreak: 'break-all',
               marginLeft: '4px'
             }}>
-              {cachePath || (isMac ? '~/Documents/WeFlow' : isLinux ? '~/Documents/WeFlow' : '系统 文档\\WeFlow 目录')}
+              {cachePath || (isMac ? '~/Documents/WeLine' : isLinux ? '~/Documents/WeLine' : '系统 文档\\WeLine 目录')}
             </code>
           </div>
 
@@ -3917,7 +3917,7 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
               <strong>触发方式一：活跃会话分析</strong> — 每当微信数据库变化（即你收到新消息）时，经过约 2 秒防抖后，对符合黑白名单规则的活跃会话进行分析。<br />
               <strong>触发方式二：沉默扫描</strong> — 每 4 小时独立扫描一次，对超过阈值天数无消息的联系人发出提醒。<br />
               <strong>频率控制</strong> — 冷却期、沉默间隔、黑白名单均在本地判断，不额外发送给模型。<br />
-              <strong>隐私</strong> — 所有分析请求均直接从你的电脑发往你填写的 API 地址，不经过任何 WeFlow 服务器。
+              <strong>隐私</strong> — 所有分析请求均直接从你的电脑发往你填写的 API 地址，不经过任何 WeLine 服务器。
             </p>
           </div>
         </div>
@@ -4659,24 +4659,24 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
     <div className="tab-content about-tab">
       <div className="about-card">
         <div className="about-logo">
-          <img src="./logo.png" alt="WeFlow" />
+          <img src="./logo.png" alt="WeLine" />
         </div>
-        <h2 className="about-name">WeFlow</h2>
+        <h2 className="about-name">WeLine</h2>
         <p className="about-version">v{appVersion || '...'}</p>
       </div>
 
       <div className="about-footer">
         <p className="about-desc">微信聊天记录分析工具</p>
         <div className="about-links">
-          <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://weflow.top') }}>官网</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://github.com/jiankujidu/WeLine') }}>官网</a>
           <span>·</span>
-          <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://github.com/hicccc77/WeFlow') }}>GitHub 仓库</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://github.com/jiankujidu/WeLine') }}>GitHub 仓库</a>
           <span>·</span>
           <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://chatlab.fun') }}>ChatLab</a>
           <span>·</span>
           <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.window.openAgreementWindow() }}>用户协议</a>
         </div>
-        <p className="copyright">© 2026 WeFlow. All rights reserved.</p>
+        <p className="copyright">© 2026 WeLine. All rights reserved.</p>
 
         <div className="log-toggle-line" style={{ marginTop: '16px', justifyContent: 'center' }}>
           <span style={{ fontSize: '13px', opacity: 0.7 }}>匿名数据收集</span>

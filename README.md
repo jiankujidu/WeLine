@@ -1,23 +1,30 @@
-# WeFlow
+# WeLine
 
-WeFlow 是一个**完全本地**的微信**实时**聊天记录查看、分析与导出工具。它可以实时获取你的微信聊天记录并将其导出，还可以根据你的聊天记录为你生成独一无二的分析报告。
+> **派生说明 / Fork Notice**
+>
+> **WeLine** 是基于 [WeFlow](https://github.com/hicccc77/WeFlow)（原作者 **@hicccc77**，原协议 **CC BY-NC-SA 4.0**）修改而来的二改版本，由 **jiankujidu（艰苦极度）** 维护。
+> 原项目 `package.json` 中明确要求「二改不应改变作者与应用信息」，故此处**保留原作者署名与协议**。本修改**仅供非商业用途**，并按相同协议（CC BY-NC-SA 4.0）发布。
+>
+> WeLine is a modified fork of [WeFlow](https://github.com/hicccc77/WeFlow) by **@hicccc77** (originally licensed under CC BY-NC-SA 4.0), maintained by **jiankujidu**. Original authorship and license are preserved; non-commercial use only, shared under the same license.
+
+WeLine 是一个**完全本地**的微信**实时**聊天记录查看、分析与导出工具（继承自 WeFlow 的全部功能）。它可以实时获取你的微信聊天记录并将其导出，还可以根据你的聊天记录为你生成独一无二的分析报告。
 
 ---
 
-**WeFlow** is a fully local tool for viewing, analyzing, and exporting WeChat chat history in real time. It generates unique analysis reports based on your chat history.
+**WeLine** is a fully local tool for viewing, analyzing, and exporting WeChat chat history in real time (forked from WeFlow). It generates unique analysis reports based on your chat history.
 
 <p align="center">
-  <img src="app.jpg" alt="WeFlow 应用预览" width="90%">
+  <img src="app.jpg" alt="WeLine 应用预览" width="90%">
 </p>
 
 <p align="center">
-  <a href="https://github.com/hicccc77/WeFlow/stargazers"><img src="https://img.shields.io/github/stars/hicccc77/WeFlow?style=flat&label=Stars&labelColor=1F2937&color=2563EB" alt="Stargazers"></a>
-  <a href="https://github.com/hicccc77/WeFlow/network/members"><img src="https://img.shields.io/github/forks/hicccc77/WeFlow?style=flat&label=Forks&labelColor=1F2937&color=7C3AED" alt="Forks"></a>
-  <a href="https://github.com/hicccc77/WeFlow/issues"><img src="https://img.shields.io/github/issues/hicccc77/WeFlow?style=flat&label=Issues&labelColor=1F2937&color=D97706" alt="Issues"></a>
-  <a href="https://github.com/hicccc77/WeFlow/releases"><img src="https://img.shields.io/github/downloads/hicccc77/WeFlow/total?style=flat&label=Downloads&labelColor=1F2937&color=059669" alt="Downloads"></a>
+  <a href="https://github.com/jiankujidu/WeLine/stargazers"><img src="https://img.shields.io/github/stars/jiankujidu/WeLine?style=flat&label=Stars&labelColor=1F2937&color=2563EB" alt="Stargazers"></a>
+  <a href="https://github.com/jiankujidu/WeLine/network/members"><img src="https://img.shields.io/github/forks/jiankujidu/WeLine?style=flat&label=Forks&labelColor=1F2937&color=7C3AED" alt="Forks"></a>
+  <a href="https://github.com/jiankujidu/WeLine/issues"><img src="https://img.shields.io/github/issues/jiankujidu/WeLine?style=flat&label=Issues&labelColor=1F2937&color=D97706" alt="Issues"></a>
+  <a href="https://github.com/jiankujidu/WeLine/releases"><img src="https://img.shields.io/github/downloads/jiankujidu/WeLine/total?style=flat&label=Downloads&labelColor=1F2937&color=059669" alt="Downloads"></a>
   <br><br>
   <a href="https://t.me/weflow_cc"><img src="https://img.shields.io/badge/Telegram-频道-1D9BF0?style=flat&logo=telegram&logoColor=white&labelColor=1F2937&color=1D9BF0" alt="Telegram Channel" style="height: 22px; vertical-align: middle;"></a>
-  <a href="https://www.star-history.com/hicccc77/weflow"><img src="https://api.star-history.com/badge?repo=hicccc77/WeFlow&theme=dark" alt="Star History Rank" style="height: 32px; vertical-align: middle;"></a>
+  <a href="https://www.star-history.com/jiankujidu/WeLine"><img src="https://api.star-history.com/badge?repo=jiankujidu/WeLine&theme=dark" alt="Star History Rank" style="height: 32px; vertical-align: middle;"></a>
 </p>
 
 > [!TIP]
@@ -72,17 +79,17 @@ WeFlow 是一个**完全本地**的微信**实时**聊天记录查看、分析�
 
 ## 快速开始
 
-若你只想使用成品版本，可前往 [Releases](https://github.com/hicccc77/WeFlow/releases) 下载并安装。
+若你只想使用成品版本，可前往 [Releases](https://github.com/jiankujidu/WeLine/releases) 下载并安装。
 
-> ArchLinux 用户可以选择 `yay -S weflow` 快速安装
+> ArchLinux 用户可以选择 `yay -S weline` 快速安装
 
 ---
 
 **Quick Start**
 
-If you just want to use the pre-compiled application, go to [Releases](https://github.com/hicccc77/WeFlow/releases) to download and install.
+If you just want to use the pre-compiled application, go to [Releases](https://github.com/jiankujidu/WeLine/releases) to download and install.
 
-> ArchLinux users can quickly install with `yay -S weflow`
+> ArchLinux users can quickly install with `yay -S weline`
 
 ## 详细功能清单
 
@@ -156,7 +163,7 @@ Complete API documentation: [Click to view](docs/HTTP-API.md)
 
 ```bash
 # 1. 克隆项目到本地
-git clone https://github.com/hicccc77/WeFlow.git
+git clone https://github.com/jiankujidu/WeLine.git
 cd WeFlow
 
 # 2. 安装项目依赖
@@ -174,7 +181,7 @@ If you want to build from source or contribute code to the project, please follo
 
 ```bash
 # 1. Clone the project locally
-git clone https://github.com/hicccc77/WeFlow.git
+git clone https://github.com/jiankujidu/WeLine.git
 cd WeFlow
 
 # 2. Install project dependencies

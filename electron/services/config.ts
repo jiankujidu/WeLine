@@ -239,9 +239,9 @@ export class ConfigService {
     }
 
     const storeOptions: any = {
-      name: 'WeFlow-config',
+      name: 'WeLine-config',
       defaults,
-      projectName: String(process.env.WEFLOW_PROJECT_NAME || 'WeFlow').trim() || 'WeFlow'
+      projectName: String(process.env.WEFLOW_PROJECT_NAME || 'WeLine').trim() || 'WeLine'
     }
     const runningInWorker = process.env.WEFLOW_WORKER === '1'
     if (runningInWorker) {
@@ -258,7 +258,7 @@ export class ConfigService {
       if (message.includes('projectName')) {
         const fallbackOptions = {
           ...storeOptions,
-          projectName: 'WeFlow',
+          projectName: 'WeLine',
           cwd: storeOptions.cwd || process.env.WEFLOW_CONFIG_CWD || process.env.WEFLOW_USER_DATA_PATH || process.cwd()
         }
         this.store = new Store<ConfigSchema>(fallbackOptions)
@@ -837,6 +837,47 @@ export class ConfigService {
       xorKey: this.get('imageXorKey'),
       aesKey: this.get('imageAesKey')
     }
+  }
+
+  /**
+   * 获取当前/指定 wxid 对应的解密密钥，优先从全局配置取，找不到则回退到按账号(wxidConfigs)配置。
+   * 用于修复全局 decryptKey 为空（多账号/Worker 未同步）时导出报"请先配置解密密钥"的问题。
+   */
+  getDecryptKeyForWxid(wxid?: string): string {
+    const globalKey = this.get('decryptKey')
+    if (globalKey) return globalKey
+    const targetWxid = (wxid || this.get('myWxid') || '').trim()
+    if (targetWxid) {
+      const wxidConfigs = this.get('wxidConfigs') || {}
+      // wxidConfigs 的 key 是清洗后的账号名（去掉 _xxxx 后缀），而 myWxid 可能是原始带后缀形式，需兼容
+      const cleaned = this.cleanWxidForLookup(targetWxid)
+      const candidates = Array.from(new Set([targetWxid, cleaned].filter(Boolean)))
+      for (const key of candidates) {
+        const cfg = wxidConfigs[key]
+        if (cfg?.decryptKey) return cfg.decryptKey
+      }
+    }
+    // 兜底：单账号场景（myWxid 可能为空或不一致，但只配了一个账号）
+    const entries = Object.entries(this.get('wxidConfigs') || {})
+    if (entries.length === 1 && entries[0][1]?.decryptKey) {
+      return entries[0][1].decryptKey
+    }
+    return ''
+  }
+
+  /**
+   * 与 chatService.cleanAccountDirName 对齐的 wxid 清洗（用于按账号配置查找时兼容原始/清洗两种形式）
+   */
+  private cleanWxidForLookup(dirName: string): string {
+    const trimmed = (dirName || '').trim()
+    if (!trimmed) return trimmed
+    if (trimmed.toLowerCase().startsWith('wxid_')) {
+      const match = trimmed.match(/^(wxid_[^_]+)/i)
+      if (match) return match[1]
+      return trimmed
+    }
+    const suffixMatch = trimmed.match(/^(.+)_([a-zA-Z0-9]{4})$/)
+    return suffixMatch ? suffixMatch[1] : trimmed
   }
 
   private getUserDataPath(): string {

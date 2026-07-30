@@ -13,7 +13,7 @@ function HomePage() {
 
       <div className="home-content">
         <div className="hero">
-          <h1 className="hero-title">WeFlow</h1>
+          <h1 className="hero-title">WeLine</h1>
           <p className="hero-subtitle">每一条消息的背后，都藏着一段温暖的时光</p>
         </div>
       </div>

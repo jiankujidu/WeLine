@@ -166,6 +166,7 @@ export interface ContactInfo {
   labels?: string[]
   detailDescription?: string
   region?: string
+  phone?: string
   avatarUrl?: string
   type: 'friend' | 'group' | 'official' | 'former_friend' | 'other'
 }
@@ -344,6 +345,7 @@ const FRIEND_EXCLUDE_USERNAMES = new Set(['medianote', 'floatbottle', 'qmessage'
 
 class ChatService {
   private configService: ConfigService
+  private runtimeConfig: { dbPath?: string; decryptKey?: string; myWxid?: string } | null = null
   private connected = false
   private readonly dbMonitorListeners = new Set<(type: string, json: string) => void>()
   private messageCursors: Map<string, { cursor: number; fetched: number; batchSize: number; startTime?: number; endTime?: number; ascending?: boolean; bufferedMessages?: any[] }> = new Map()
@@ -453,6 +455,14 @@ class ChatService {
   }
 
   /**
+   * 设置运行时配置（Worker 模式下由主进程注入明文密钥等）
+   * 用于修复 Worker 内 safeStorage 不可用导致读不到加密配置的问题
+   */
+  setRuntimeConfig(config: { dbPath?: string; decryptKey?: string; myWxid?: string } | null): void {
+    this.runtimeConfig = config
+  }
+
+  /**
    * 清理账号目录名
    */
   private cleanAccountDirName(dirName: string): string {
@@ -521,7 +531,7 @@ class ChatService {
     try {
       await dialog.showMessageBox({
         type: 'error',
-        title: 'WeFlow 启动失败',
+        title: 'WeLine 启动失败',
         message: '启动失败，请反馈错误码。',
         detail,
         buttons: ['确定'],
@@ -540,9 +550,9 @@ class ChatService {
       if (this.connected && wcdbService.isReady()) {
         return { success: true }
       }
-      const wxid = this.configService.get('myWxid')
-      const dbPath = this.configService.get('dbPath')
-      const decryptKey = this.configService.get('decryptKey')
+      const wxid = this.runtimeConfig?.myWxid || this.configService.get('myWxid')
+      const dbPath = this.runtimeConfig?.dbPath || this.configService.get('dbPath')
+      const decryptKey = this.runtimeConfig?.decryptKey || this.configService.getDecryptKeyForWxid(wxid)
       if (!wxid) {
         return { success: false, error: '请先在设置页面配置微信ID' }
       }
@@ -2130,6 +2140,7 @@ class ChatService {
         const labels = isLiteMode ? [] : this.parseContactLabels(row, contactLabelNameMap)
         const detailDescription = isLiteMode ? '' : this.getContactSignature(row)
         const region = isLiteMode ? '' : this.getContactRegion(row)
+        const phone = isLiteMode ? '' : this.getContactPhone(row)
 
         contacts.push({
           username,
@@ -2140,6 +2151,7 @@ class ChatService {
           labels: labels.length > 0 ? labels : undefined,
           detailDescription: detailDescription || undefined,
           region: region || undefined,
+          phone: phone || undefined,
           avatarUrl: undefined,
           type,
           lastContactTime: lastContactTimeMap.get(username) || 0
@@ -2249,7 +2261,7 @@ class ChatService {
         }
 
         // 创建新游标
-        // 注意：WeFlow 数据库中的 create_time 是以秒为单位的
+        // 注意：WeLine 数据库中的 create_time 是以秒为单位的
         const cursorBatchSize = Math.max(1, Math.floor(state?.batchSize || requestLimit || this.messageBatchDefault))
         const beginTimestamp = startTime > 10000000000 ? Math.floor(startTime / 1000) : startTime
         const endTimestamp = endTime > 10000000000 ? Math.floor(endTime / 1000) : endTime
@@ -2434,7 +2446,7 @@ class ChatService {
   }
 
   /**
-   * 从本地 WeFlow emoji 缓存目录按 md5 查找文件
+   * 从本地 WeLine emoji 缓存目录按 md5 查找文件
    */
   private findEmojiInLocalCache(msg: Message): void {
     if (!msg.emojiMd5) return
@@ -3311,6 +3323,54 @@ class ChatService {
       const text = normalize(signature)
       if (!text) continue
       return text
+    }
+
+    return ''
+  }
+
+  private getContactPhone(row: Record<string, any>): string {
+    const normalize = (raw: unknown): string => {
+      const text = String(raw || '').replace(/\u0000/g, '').trim()
+      if (!text) return ''
+      // 只保留数字、空格、+、(、)、-、转义
+      const cleaned = text.replace(/[^\d+\-()\s]/g, '').trim()
+      // 过滤掉明显非电话号码的值
+      const lower = text.toLowerCase()
+      if (lower === '-' || lower === '--' || lower === 'null' || lower === 'undefined' || lower === 'none' || lower === '微信' || lower === 'wx') {
+        return ''
+      }
+      // 至少包含 6 位数字才认为是电话号码
+      const digitCount = (cleaned.match(/\d/g) || []).length
+      if (digitCount < 6) return ''
+      return cleaned
+    }
+
+    // 直接字段匹配：phone / mobile / telephone / tel / phone_number 等
+    const direct = normalize(
+      this.getRowField(row, [
+        'phone', 'mobile', 'telephone', 'tel', 'phone_number', 'phoneNumber',
+        'contact_phone', 'contactPhone', 'cellphone', 'cell_phone', 'cellPhone'
+      ])
+    )
+    if (direct) return direct
+
+    // 兜底：扫描 row 中所有 key 含 phone/mobile/tel 的字段
+    for (const [key, value] of Object.entries(row || {})) {
+      const normalizedKey = String(key || '').toLowerCase()
+      if (!normalizedKey) continue
+      if (normalizedKey.includes('phone') || normalizedKey.includes('mobile') || normalizedKey.includes('tel')) {
+        const text = normalize(value)
+        if (text) return text
+      }
+    }
+
+    // 再从 extra_buffer 里找可能含电话的字符串字段（扫描前 60 个 proto 字段）
+    for (let field = 1; field <= 60; field++) {
+      const extraStrings = this.extractExtraBufferTopLevelFieldStrings(row, field)
+      for (const s of extraStrings) {
+        const text = normalize(s)
+        if (text) return text
+      }
     }
 
     return ''
@@ -7181,7 +7241,7 @@ class ChatService {
     }
     // 回退到默认目录
     const documentsPath = app.getPath('documents')
-    return join(documentsPath, 'WeFlow', 'Voices')
+    return join(documentsPath, 'WeLine', 'Voices')
   }
 
   private getEmojiCacheDir(): string {
@@ -7191,7 +7251,7 @@ class ChatService {
     }
     // 回退到默认目录
     const documentsPath = app.getPath('documents')
-    return join(documentsPath, 'WeFlow', 'Emojis')
+    return join(documentsPath, 'WeLine', 'Emojis')
   }
 
   clearCaches(options?: { includeMessages?: boolean; includeContacts?: boolean; includeEmojis?: boolean }): { success: boolean; error?: string } {
@@ -8629,7 +8689,7 @@ class ChatService {
   /** 获取持久化转写缓存文件路径 */
   private getTranscriptCachePath(): string {
     const cachePath = this.configService.get('cachePath')
-    const base = cachePath || join(app.getPath('documents'), 'WeFlow')
+    const base = cachePath || join(app.getPath('documents'), 'WeLine')
     return join(base, 'Voices', 'transcripts.json')
   }
 

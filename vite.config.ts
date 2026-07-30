@@ -32,7 +32,7 @@ const exportWorkerElectronShimPlugin = () => {
           return process.env.XDG_CONFIG_HOME || join(homedir(), '.config')
         }
         const getPath = (name) => {
-          if (name === 'userData') return workerUserDataPath() || join(appDataPath(), 'WeFlow')
+          if (name === 'userData') return workerUserDataPath() || join(appDataPath(), 'WeLine')
           if (name === 'documents') return join(homedir(), 'Documents')
           if (name === 'desktop') return join(homedir(), 'Desktop')
           if (name === 'downloads') return join(homedir(), 'Downloads')
@@ -45,7 +45,7 @@ const exportWorkerElectronShimPlugin = () => {
           isPackaged: Boolean(process.resourcesPath && process.env.NODE_ENV !== 'development'),
           getPath,
           getAppPath: () => process.cwd(),
-          getName: () => 'WeFlow',
+          getName: () => 'WeLine',
           getVersion: () => process.env.npm_package_version || '0.0.0'
         }
         export const BrowserWindow = { getAllWindows: () => [] }

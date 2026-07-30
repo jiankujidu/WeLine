@@ -1,17 +1,27 @@
 {
-  "name": "weflow",
+  "name": "weline",
   "version": "4.3.0",
-  "description": "WeFlow",
+  "description": "WeLine - 微信聊天记录查看、分析与导出工具（基于 WeFlow 修改，原作者 @hicccc77）",
   "main": "dist-electron/main.js",
   "author": {
     "name": "cc",
     "email": "yccccccy@proton.me"
   },
+  "contributors": [
+    "jiankujidu (艰苦极度) <jiankujidu@users.noreply.github.com>"
+  ],
+  "forkedFrom": "https://github.com/hicccc77/WeFlow",
+  "originalAuthor": "cc (yccccccy@proton.me) — @hicccc77",
+  "license": "CC-BY-NC-SA-4.0",
+  "homepage": "https://github.com/jiankujidu/WeLine",
+  "bugs": {
+    "url": "https://github.com/jiankujidu/WeLine/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hicccc77/WeFlow"
+    "url": "https://github.com/jiankujidu/WeLine"
   },
-  "//": "二改不应改变此处的作者与应用信息",
+  "//": "二改不应改变此处的作者与应用信息（原项目 CC BY-NC-SA 4.0，作者要求保留原作者署名；本 fork 由 jiankujidu 二改）",
   "scripts": {
     "postinstall": "electron-builder install-app-deps && node scripts/prepare-electron-runtime.cjs",
     "rebuild": "electron-rebuild",
@@ -74,14 +84,14 @@
     }
   },
   "build": {
-    "appId": "com.WeFlow.app",
+    "appId": "com.WeLine.app",
     "publish": {
       "provider": "github",
-      "owner": "hicccc77",
-      "repo": "WeFlow",
+      "owner": "jiankujidu",
+      "repo": "WeLine",
       "releaseType": "release"
     },
-    "productName": "WeFlow",
+    "productName": "WeLine",
     "artifactName": "${productName}-${version}-Setup.${ext}",
     "directories": {
       "output": "release"
@@ -129,8 +139,8 @@
         "tar.gz"
       ],
       "category": "Utility",
-      "executableName": "weflow",
-      "synopsis": "WeFlow for Linux",
+      "executableName": "weline",
+      "synopsis": "WeLine for Linux",
       "extraFiles": [
         {
           "from": "resources/installer/linux/install.sh",

@@ -14,7 +14,7 @@ import './WelcomePage.scss'
 const isMac = navigator.userAgent.toLowerCase().includes('mac')
 const isLinux = navigator.userAgent.toLowerCase().includes('linux')
 const isWindows = !isMac && !isLinux
-const MAC_KEY_FAQ_URL = 'https://github.com/hicccc77/WeFlow/blob/main/docs/MAC-KEY-FAQ.md'
+const MAC_KEY_FAQ_URL = 'https://github.com/jiankujidu/WeLine/blob/main/docs/MAC-KEY-FAQ.md'
 
 const DB_PATH_CHINESE_ERROR = '路径包含中文字符，迁移至全英文目录后再试'
 const dbPathPlaceholder = isMac
@@ -184,7 +184,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
       setDbKeyStatus(normalizedMessage)
       if (isDbKeyReadyMessage(normalizedMessage)) {
         window.electronAPI.notification?.show({
-          title: 'WeFlow 准备就绪',
+          title: 'WeLine 准备就绪',
           content: '现在可以登录微信了',
           avatarUrl: './logo.png',
           sessionId: 'weflow-system'
@@ -831,9 +831,9 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
           )}
           <div className="welcome-sidebar">
             <div className="sidebar-header">
-              <img src="./logo.png" alt="WeFlow" className="sidebar-logo" />
+              <img src="./logo.png" alt="WeLine" className="sidebar-logo" />
               <div className="sidebar-brand">
-                <span className="brand-name">WeFlow</span>
+                <span className="brand-name">WeLine</span>
                 <span className="brand-tag">Connected</span>
               </div>
             </div>
@@ -891,9 +891,9 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         )}
         <div className="welcome-sidebar">
           <div className="sidebar-header">
-            <img src="./logo.png" alt="WeFlow" className="sidebar-logo" />
+            <img src="./logo.png" alt="WeLine" className="sidebar-logo" />
             <div className="sidebar-brand">
-              <span className="brand-name">WeFlow</span>
+              <span className="brand-name">WeLine</span>
               <span className="brand-tag">Setup</span>
             </div>
           </div>
@@ -1196,7 +1196,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
           {currentStep.id === 'intro' && (
             <div className="intro-footer">
               <p>接下来的几个步骤将引导你连接本地微信数据库。</p>
-              <p>WeFlow 需要访问你的本地数据文件以提供分析与导出功能。</p>
+              <p>WeLine 需要访问你的本地数据文件以提供分析与导出功能。</p>
             </div>
           )}
 
@@ -1224,13 +1224,13 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         <ConfirmDialog
             open={showDbKeyConfirm}
             title="开始获取数据库密钥"
-            message={`当开始获取后 WeFlow 将会执行准备操作。
+            message={`当开始获取后 WeLine 将会执行准备操作。
 ${isLinux ? `
 【⚠️ Linux 用户特别注意】
 如果您在微信里勾选了“自动登录”，请务必先关闭自动登录，然后再点击下方确认！
 （因为授权弹窗输入密码需要时间，若自动登录太快会导致获取失败）
 ` : ''}
-当 WeFlow 内的提示条变为绿色显示允许登录或看到来自 WeFlow 的登录通知时，请在手机上确认登录微信。`}
+当 WeLine 内的提示条变为绿色显示允许登录或看到来自 WeLine 的登录通知时，请在手机上确认登录微信。`}
             onConfirm={handleDbKeyConfirm}
             onCancel={() => setShowDbKeyConfirm(false)}
         />

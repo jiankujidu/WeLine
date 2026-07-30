@@ -1542,7 +1542,7 @@ export class ImageDecryptService {
       const configured = this.configService.get('cachePath')
       root = configured
         ? join(configured, 'Images')
-        : join(this.getDocumentsPath(), 'WeFlow', 'Images')
+        : join(this.getDocumentsPath(), 'WeLine', 'Images')
       this.cacheRootPath = root
     }
     this.ensureDir(root)
@@ -2226,7 +2226,7 @@ export class ImageDecryptService {
     const configured = this.configService.get('cachePath')
     const root = configured
       ? join(configured, 'Images')
-      : join(this.getDocumentsPath(), 'WeFlow', 'Images')
+      : join(this.getDocumentsPath(), 'WeLine', 'Images')
 
     try {
       if (!existsSync(root)) {

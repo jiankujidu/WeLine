@@ -94,6 +94,7 @@ class ContactExportService {
                 remark: c.remark,
                 nickname: c.nickname,
                 alias: c.alias,
+                phone: c.phone || '',
                 labels: Array.isArray(c.labels) ? c.labels : [],
                 detailDescription: c.detailDescription,
                 type: c.type
@@ -106,13 +107,14 @@ class ContactExportService {
      * 导出为CSV格式
      */
     private async exportToCSV(contacts: any[], outputPath: string): Promise<void> {
-        const headers = ['用户名', '显示名称', '备注', '昵称', '微信号', '标签', '详细描述', '类型']
+        const headers = ['用户名', '显示名称', '备注', '昵称', '微信号', '电话', '标签', '详细描述', '类型']
         const rows = contacts.map(c => [
             c.username || '',
             c.displayName || '',
             c.remark || '',
             c.nickname || '',
             c.alias || '',
+            c.phone || '',
             Array.isArray(c.labels) ? c.labels.join(' | ') : '',
             c.detailDescription || '',
             this.getTypeLabel(c.type)
@@ -141,6 +143,11 @@ class ContactExportService {
                 // 昵称
                 if (c.nickname) {
                     lines.push(`NICKNAME:${c.nickname}`)
+                }
+
+                // 电话
+                if (c.phone) {
+                    lines.push(`TEL;TYPE=CELL:${c.phone}`)
                 }
 
                 const noteParts = [

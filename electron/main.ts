@@ -188,7 +188,7 @@ const resetUpdaterProviderCache = () => {
 }
 
 const getUpdaterFeedUrlByTrack = (track: 'stable' | 'preview' | 'dev'): string => {
-  const repoBase = 'https://github.com/hicccc77/WeFlow/releases'
+  const repoBase = 'https://github.com/jiankujidu/WeLine/releases'
   if (track === 'stable') return `${repoBase}/latest/download`
   if (track === 'preview') return `${repoBase}/download/nightly-preview`
   return `${repoBase}/download/nightly-dev`
@@ -251,7 +251,7 @@ const getSystemLaunchAtStartup = (): boolean => {
   try {
     return app.getLoginItemSettings().openAtLogin === true
   } catch (error) {
-    console.error('[WeFlow] 读取开机自启动状态失败:', error)
+    console.error('[WeLine] 读取开机自启动状态失败:', error)
     return false
   }
 }
@@ -337,7 +337,7 @@ const syncLaunchAtStartupPreference = () => {
   const result = setSystemLaunchAtStartup(storedPreference)
   configService.set('launchAtStartup', result.enabled)
   if (!result.success && result.error) {
-    console.error('[WeFlow] 同步开机自启动设置失败:', result.error)
+    console.error('[WeLine] 同步开机自启动设置失败:', result.error)
   }
 }
 
@@ -372,7 +372,7 @@ function sanitizePathEnv() {
   const filtered = parts.filter(isSafe)
   if (filtered.length !== parts.length) {
     const removed = parts.filter((p) => !isSafe(p))
-    console.warn('[WeFlow] 使用白名单裁剪 PATH，移除目录:', removed)
+    console.warn('[WeLine] 使用白名单裁剪 PATH，移除目录:', removed)
     const nextPath = filtered.join(sep)
     process.env.PATH = nextPath
     process.env.Path = nextPath
@@ -1582,7 +1582,7 @@ const collectLegacySnsCacheMigrationPlan = async (): Promise<SnsCacheMigrationPl
 
   const legacyBaseDir = configService.getCacheBasePath()
   const configuredCachePath = String(configService.get('cachePath') || '').trim()
-  const currentBaseDir = configuredCachePath || join(app.getPath('documents'), 'WeFlow')
+  const currentBaseDir = configuredCachePath || join(app.getPath('documents'), 'WeLine')
 
   if (!legacyBaseDir || !currentBaseDir) return null
 
@@ -1784,7 +1784,7 @@ function registerIpcHandlers() {
     if (isLaunchAtStartupSupported() && getSystemLaunchAtStartup()) {
       const result = setSystemLaunchAtStartup(false)
       if (!result.success && result.error) {
-        console.error('[WeFlow] 清空配置时关闭开机自启动失败:', result.error)
+        console.error('[WeLine] 清空配置时关闭开机自启动失败:', result.error)
       }
     }
     configService?.clear()
@@ -2375,13 +2375,13 @@ function registerIpcHandlers() {
       }
 
       const configuredCachePath = String(cfg.get('cachePath') || '').trim()
-      const documentsWeFlowDir = join(app.getPath('documents'), 'WeFlow')
+      const documentsWeLineDir = join(app.getPath('documents'), 'WeLine')
       const userDataCacheDir = join(app.getPath('userData'), 'cache')
       const cacheRootCandidates = [
         configuredCachePath,
-        join(documentsWeFlowDir, 'Images'),
-        join(documentsWeFlowDir, 'Voices'),
-        join(documentsWeFlowDir, 'Emojis'),
+        join(documentsWeLineDir, 'Images'),
+        join(documentsWeLineDir, 'Voices'),
+        join(documentsWeLineDir, 'Emojis'),
         userDataCacheDir
       ].filter(Boolean)
 
@@ -2392,9 +2392,9 @@ function registerIpcHandlers() {
           await removePathIfExists(join(configuredCachePath, 'Voices', wxid), removedPaths, warnings)
           await removePathIfExists(join(configuredCachePath, 'Emojis', wxid), removedPaths, warnings)
         }
-        await removePathIfExists(join(documentsWeFlowDir, 'Images', wxid), removedPaths, warnings)
-        await removePathIfExists(join(documentsWeFlowDir, 'Voices', wxid), removedPaths, warnings)
-        await removePathIfExists(join(documentsWeFlowDir, 'Emojis', wxid), removedPaths, warnings)
+        await removePathIfExists(join(documentsWeLineDir, 'Images', wxid), removedPaths, warnings)
+        await removePathIfExists(join(documentsWeLineDir, 'Voices', wxid), removedPaths, warnings)
+        await removePathIfExists(join(documentsWeLineDir, 'Emojis', wxid), removedPaths, warnings)
         await removePathIfExists(join(userDataCacheDir, wxid), removedPaths, warnings)
       }
 
@@ -2405,11 +2405,11 @@ function registerIpcHandlers() {
 
     if (clearExports) {
       const configuredExportPath = String(cfg.get('exportPath') || '').trim()
-      const documentsWeFlowDir = join(app.getPath('documents'), 'WeFlow')
+      const documentsWeLineDir = join(app.getPath('documents'), 'WeLine')
       const exportRootCandidates = [
         configuredExportPath,
-        join(documentsWeFlowDir, 'exports'),
-        join(documentsWeFlowDir, 'Exports')
+        join(documentsWeLineDir, 'exports'),
+        join(documentsWeLineDir, 'Exports')
       ].filter(Boolean)
 
       for (const exportRoot of exportRootCandidates) {
@@ -3095,7 +3095,7 @@ function registerIpcHandlers() {
     configService = cfg
     const logEnabled = cfg.get('logEnabled')
     const dbPath = String(cfg.get('dbPath') || '').trim()
-    const decryptKey = String(cfg.get('decryptKey') || '').trim()
+    const decryptKey = cfg.getDecryptKeyForWxid()
     const myWxid = String(cfg.get('myWxid') || '').trim()
     const imageKeys = cfg.getImageKeysForCurrentWxid()
     const resourcesPath = app.isPackaged
@@ -3244,7 +3244,7 @@ function registerIpcHandlers() {
             outputPath,
             options,
             dbPath: String(cfg.get('dbPath') || '').trim(),
-            decryptKey: String(cfg.get('decryptKey') || '').trim(),
+            decryptKey: cfg.getDecryptKeyForWxid(),
             myWxid: String(cfg.get('myWxid') || '').trim(),
             imageXorKey: imageKeys.xorKey,
             imageAesKey: imageKeys.aesKey,
@@ -3313,7 +3313,7 @@ function registerIpcHandlers() {
             outputDir,
             options,
             dbPath: String(cfg.get('dbPath') || '').trim(),
-            decryptKey: String(cfg.get('decryptKey') || '').trim(),
+            decryptKey: cfg.getDecryptKeyForWxid(),
             myWxid: String(cfg.get('myWxid') || '').trim(),
             resourcesPath: app.isPackaged ? join(process.resourcesPath, 'resources') : join(app.getAppPath(), 'resources'),
             userDataPath: app.getPath('userData'),
@@ -3546,7 +3546,7 @@ function registerIpcHandlers() {
     configService = cfg
     return annualReportService.getAvailableYears({
       dbPath: cfg.get('dbPath'),
-      decryptKey: cfg.get('decryptKey'),
+      decryptKey: cfg.getDecryptKeyForWxid(),
       wxid: cfg.get('myWxid')
     })
   })
@@ -3556,7 +3556,7 @@ function registerIpcHandlers() {
     configService = cfg
 
     const dbPath = cfg.get('dbPath')
-    const decryptKey = cfg.get('decryptKey')
+    const decryptKey = cfg.getDecryptKeyForWxid()
     const wxid = cfg.get('myWxid')
     const cacheKey = buildAnnualReportYearsCacheKey(dbPath, wxid)
 
@@ -3743,7 +3743,7 @@ function registerIpcHandlers() {
     configService = cfg
 
     const dbPath = cfg.get('dbPath')
-    const decryptKey = cfg.get('decryptKey')
+    const decryptKey = cfg.getDecryptKeyForWxid()
     const wxid = cfg.get('myWxid')
     const logEnabled = cfg.get('logEnabled')
 
@@ -3804,7 +3804,7 @@ function registerIpcHandlers() {
     configService = cfg
 
     const dbPath = cfg.get('dbPath')
-    const decryptKey = cfg.get('decryptKey')
+    const decryptKey = cfg.getDecryptKeyForWxid()
     const wxid = cfg.get('myWxid')
     const logEnabled = cfg.get('logEnabled')
     const friendUsername = payload?.friendUsername
@@ -4177,7 +4177,7 @@ app.whenReady().then(async () => {
 
   try {
     tray = new Tray(resolvedTrayIcon)
-    tray.setToolTip('WeFlow')
+    tray.setToolTip('WeLine')
     const contextMenu = Menu.buildFromTemplate([
       {
         label: '显示主窗口',

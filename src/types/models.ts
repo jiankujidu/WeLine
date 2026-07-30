@@ -40,6 +40,7 @@ export interface ContactInfo {
   labels?: string[]
   detailDescription?: string
   region?: string
+  phone?: string
   avatarUrl?: string
   type: 'friend' | 'group' | 'official' | 'former_friend' | 'other'
 }

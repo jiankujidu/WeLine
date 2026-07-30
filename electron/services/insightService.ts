@@ -1267,7 +1267,7 @@ ${topMentionText}
         const telegramChatIds = (this.config.get('aiInsightTelegramChatIds') as string) || ''
         if (telegramToken && telegramChatIds) {
           const chatIds = telegramChatIds.split(',').map((s) => s.trim()).filter(Boolean)
-          const telegramText = `【WeFlow】 ${notifTitle}\n\n${insight}`
+          const telegramText = `【WeLine】 ${notifTitle}\n\n${insight}`
           for (const chatId of chatIds) {
             this.sendTelegram(telegramToken, chatId, telegramText).catch((e) => {
               insightLog('WARN', `Telegram 推送失败 (chatId=${chatId}): ${(e as Error).message}`)
