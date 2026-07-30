@@ -1090,4 +1090,120 @@ export class KeyService {
       return false
     } catch { return false }
   }
+
+  // --- 数据库密钥内存扫描（已登录微信时无需重新登录）---
+  // 扫描微信进程 RW 内存区域，寻找 64 位十六进制字符串（32 字节密钥）
+  // 返回候选密钥列表，由调用方通过 wcdbService.testConnection() 验证
+
+  async scanMemoryForDbKeyCandidates(
+    onProgress?: (msg: string) => void
+  ): Promise<string[]> {
+    if (!this.ensureWin32()) return []
+    if (!this.ensureKernel32()) return []
+
+    onProgress?.('正在查找微信进程...')
+    const pid = await this.findWeChatPid()
+    if (!pid) { onProgress?.('微信进程未运行'); return [] }
+
+    onProgress?.(`已找到微信 PID=${pid}，正在扫描内存中的密钥...`)
+
+    const VirtualQueryEx = this.kernel32.func('VirtualQueryEx', 'size_t', ['void*', 'uintptr', 'void*', 'size_t'])
+    const ReadProcessMemory = this.kernel32.func('ReadProcessMemory', 'bool', ['void*', 'uintptr', 'void*', 'size_t', this.koffi.out('size_t*')])
+
+    const RW_FLAGS = 0x04 | 0x08 | 0x40 | 0x80
+    const MEM_COMMIT = 0x1000
+    const PAGE_NOACCESS = 0x01
+    const PAGE_GUARD = 0x100
+    const MBI_SIZE = 48
+
+    const hProcess = this.OpenProcess(0x1F0FFF, false, pid)
+    if (!hProcess) { onProgress?.('无法打开微信进程（权限不足？）'); return [] }
+
+    try {
+      // 枚举 RW 区域
+      const regions: Array<[number, number]> = []
+      let addr = 0n
+      const mbi = Buffer.alloc(MBI_SIZE)
+
+      while (addr < 0x7FFFFFFFFFFFn) {
+        const ret = VirtualQueryEx(hProcess, addr, mbi, MBI_SIZE)
+        if (ret === 0) break
+        const base = mbi.readBigUInt64LE(0)
+        const size = Number(mbi.readBigUInt64LE(24))
+        const state = mbi.readUInt32LE(32)
+        const protect = mbi.readUInt32LE(36)
+
+        if (state === MEM_COMMIT &&
+            protect !== PAGE_NOACCESS &&
+            (protect & PAGE_GUARD) === 0 &&
+            (protect & RW_FLAGS) !== 0 &&
+            size >= 64 && size <= 50 * 1024 * 1024) {
+          regions.push([Number(base), size])
+        }
+        const next = base + BigInt(size)
+        if (next <= addr) break
+        addr = next
+      }
+
+      onProgress?.(`找到 ${regions.length} 个可扫描内存区域，开始搜索密钥...`)
+
+      const CHUNK = 4 * 1024 * 1024 // 4MB chunks
+      const candidates = new Set<string>()
+      const HEX_CHARS = new Set('0123456789abcdefABCDEF')
+      let regionIndex = 0
+
+      for (const [base, size] of regions) {
+        regionIndex++
+        if (regionIndex % 50 === 0) {
+          onProgress?.(`扫描进度 ${regionIndex}/${regions.length}...`)
+          await new Promise(r => setTimeout(r, 1))
+        }
+
+        let offset = 0
+        while (offset < size) {
+          const chunkSize = Math.min(CHUNK, size - offset)
+          const buf = Buffer.alloc(chunkSize)
+          const bytesReadOut = [0]
+          const ok = ReadProcessMemory(hProcess, BigInt(base + offset), buf, chunkSize, bytesReadOut)
+          if (!ok || bytesReadOut[0] === 0) { offset += chunkSize; continue }
+          const data = buf.subarray(0, bytesReadOut[0])
+
+          // 搜索 ASCII 格式：连续 64 个 hex 字符，前后非 hex 字符
+          for (let i = 0; i <= data.length - 66; i++) {
+            if (HEX_CHARS.has(String.fromCharCode(data[i]))) continue // 前面不能是 hex
+            let valid = true
+            for (let j = 1; j <= 64; j++) {
+              if (!HEX_CHARS.has(String.fromCharCode(data[i + j]))) { valid = false; break }
+            }
+            if (!valid) continue
+            if (i + 65 < data.length && HEX_CHARS.has(String.fromCharCode(data[i + 65]))) continue // 后面也不能是 hex
+            const candidate = data.subarray(i + 1, i + 65).toString('ascii')
+            candidates.add(candidate.toLowerCase())
+          }
+
+          // 搜索 UTF-16LE 格式
+          for (let i = 0; i <= data.length - 131; i++) {
+            let valid = true
+            for (let j = 0; j < 64; j++) {
+              const ch = data[i + j * 2]
+              const nullByte = data[i + j * 2 + 1]
+              if (nullByte !== 0x00 || !HEX_CHARS.has(String.fromCharCode(ch))) { valid = false; break }
+            }
+            if (!valid) continue
+            if (i + 129 < data.length && data[i + 128] === 0x00 && HEX_CHARS.has(String.fromCharCode(data[i + 128]))) continue
+            const keyBytes = Buffer.alloc(64)
+            for (let j = 0; j < 64; j++) keyBytes[j] = data[i + j * 2]
+            candidates.add(keyBytes.toString('ascii').toLowerCase())
+          }
+
+          offset += chunkSize
+        }
+      }
+
+      onProgress?.(`扫描完成，找到 ${candidates.size} 个候选密钥`)
+      return Array.from(candidates)
+    } finally {
+      this.CloseHandle(hProcess)
+    }
+  }
 }

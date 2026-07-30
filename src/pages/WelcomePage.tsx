@@ -1076,6 +1076,9 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                 </div>
 
                 {dbKeyStatus && <div className={`status-message ${isDbKeyReadyMessage(dbKeyStatus) ? 'is-success' : ''}`}>{dbKeyStatus}</div>}
+                {!dbKeyStatus && !isFetchingDbKey && (
+                  <div className="field-hint">点击"自动获取密钥"后：若微信已登录将自动尝试内存扫描获取；若未登录则需先登录微信。无需每次都重新登录。</div>
+                )}
                 {isAddAccountMode && !hasReacquiredDbKey && (
                   <div className="field-hint">添加账号模式下需先自动获取一次数据库密钥，才能完成并返回主窗口。</div>
                 )}
