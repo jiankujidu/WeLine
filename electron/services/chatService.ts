@@ -3329,24 +3329,29 @@ class ChatService {
   }
 
   private getContactPhone(row: Record<string, any>): string {
-    const normalize = (raw: unknown): string => {
-      const text = String(raw || '').replace(/\u0000/g, '').trim()
-      if (!text) return ''
-      // 只保留数字、空格、+、(、)、-、转义
-      const cleaned = text.replace(/[^\d+\-()\s]/g, '').trim()
-      // 过滤掉明显非电话号码的值
-      const lower = text.toLowerCase()
-      if (lower === '-' || lower === '--' || lower === 'null' || lower === 'undefined' || lower === 'none' || lower === '微信' || lower === 'wx') {
+    // 严格校验：只接受真实电话号码格式，过滤微信库里乱存的编码/文本
+    const validatePhone = (raw: unknown): string => {
+      let s = String(raw || '').replace(/\u0000/g, '').trim()
+      if (!s) return ''
+      const lower = s.toLowerCase()
+      // 明显非电话号码的垃圾值直接丢弃
+      if (['-', '--', '—', 'null', 'undefined', 'none', '微信', 'wx', 'quiet', '.sa', 'na', 'n/a'].includes(lower)) {
         return ''
       }
-      // 至少包含 6 位数字才认为是电话号码
-      const digitCount = (cleaned.match(/\d/g) || []).length
-      if (digitCount < 6) return ''
-      return cleaned
+      // 去掉常见分隔符（空格、-、(、)），保留 + 号用于国际号
+      const digits = s.replace(/[\s\-()]/g, '')
+      // 1) 中国大陆手机号：11 位，1[3-9] 开头（允许前面带 +86 / 86）
+      const cnMobile = digits.match(/^(?:\+?86)?(1[3-9]\d{9})$/)
+      if (cnMobile) return cnMobile[1]
+      // 2) 固定电话：0 开头，10~12 位数字（区号+本地号）
+      if (/^0\d{9,11}$/.test(digits)) return digits
+      // 3) 国际号码：+ 开头，8~15 位数字（E.164 近似）
+      if (/^\+[1-9]\d{7,14}$/.test(digits)) return digits
+      return ''
     }
 
     // 直接字段匹配：phone / mobile / telephone / tel / phone_number 等
-    const direct = normalize(
+    const direct = validatePhone(
       this.getRowField(row, [
         'phone', 'mobile', 'telephone', 'tel', 'phone_number', 'phoneNumber',
         'contact_phone', 'contactPhone', 'cellphone', 'cell_phone', 'cellPhone'
@@ -3359,7 +3364,7 @@ class ChatService {
       const normalizedKey = String(key || '').toLowerCase()
       if (!normalizedKey) continue
       if (normalizedKey.includes('phone') || normalizedKey.includes('mobile') || normalizedKey.includes('tel')) {
-        const text = normalize(value)
+        const text = validatePhone(value)
         if (text) return text
       }
     }
@@ -3368,7 +3373,7 @@ class ChatService {
     for (let field = 1; field <= 60; field++) {
       const extraStrings = this.extractExtraBufferTopLevelFieldStrings(row, field)
       for (const s of extraStrings) {
-        const text = normalize(s)
+        const text = validatePhone(s)
         if (text) return text
       }
     }
