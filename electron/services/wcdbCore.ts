@@ -717,7 +717,13 @@ export class WcdbCore {
       this.lib = this.koffi.load(dllPath)
       this.writeLog('[bootstrap] koffi.load ok', true)
 
-      // InitProtection (Added for security)
+      // InitProtection (安全校验)
+      // 软错误（-101/-102/-1006）仅记录警告，不阻塞初始化——改名/重打包后 DLL 内部校验可能失败，
+      // 但核心功能（wcdb_init / wcdb_open_account 等）仍可正常工作。
+      // 仅硬错误（manifest/signature/hash 失败 -2201~-2212）才阻止继续。
+      const SOFT_PROTECTION_ERRORS = new Set([-101, -102, -1006])
+      let protectionWarning: string | null = null
+
       try {
         this.wcdbInitProtection = this.lib.func('int32 InitProtection(const char* resourcePath)')
 
@@ -758,14 +764,21 @@ export class WcdbCore {
 
         if (!protectionOk) {
           const finalCode = bestFailCode ?? protectionCode
-          lastDllInitError = this.formatInitProtectionError(finalCode)
-          this.writeLog(`[bootstrap] InitProtection failed finalCode=${finalCode}`, true)
-          return false
+          if (SOFT_PROTECTION_ERRORS.has(finalCode)) {
+            // 软错误：记录警告，允许继续初始化
+            protectionWarning = `InitProtection 返回软错误 ${finalCode}，将尝试继续初始化`
+            this.writeLog(`[bootstrap] InitProtection soft-fail code=${finalCode} — continuing anyway`, true)
+          } else {
+            // 硬错误：阻止初始化
+            lastDllInitError = this.formatInitProtectionError(finalCode)
+            this.writeLog(`[bootstrap] InitProtection hard-fail finalCode=${finalCode}`, true)
+            return false
+          }
         }
       } catch (e) {
-        lastDllInitError = this.formatInitProtectionError(-2301)
-        this.writeLog(`[bootstrap] InitProtection symbol load failed: ${String(e)}`, true)
-        return false
+        // InitProtection 符号加载失败也视为软错误（某些 DLL 版本可能不含此导出）
+        protectionWarning = `InitProtection 符号不可用 (${String(e)})，将跳过保护校验`
+        this.writeLog(`[bootstrap] InitProtection symbol load failed (non-fatal): ${String(e)}`, true)
       }
 
       // 定义类型

@@ -129,6 +129,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
   const [showDbKeyConfirm, setShowDbKeyConfirm] = useState(false)
   const [lastDbKeyError, setLastDbKeyError] = useState('')
   const imagePrefetchAttemptRef = useRef<string>('')
+  const imageKeyAbortRef = useRef(false)  // 用于取消图片密钥获取/扫描
 
   // 安全相关 state
   const [enableAuth, setEnableAuth] = useState(false)
@@ -201,6 +202,14 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         if (match) {
           pct = parseFloat(match[1]);
           msg = msg.replace(/\s*\([\d.]+%\)/, '');
+        } else {
+          // 解析 "扫描进度 520/1301..." 格式
+          const progressMatch = msg.match(/扫描进度\s*(\d+)\/(\d+)/);
+          if (progressMatch) {
+            const current = parseInt(progressMatch[1], 10);
+            const total = parseInt(progressMatch[2], 10);
+            if (total > 0) pct = (current / total) * 100;
+          }
         }
       }
 
@@ -607,6 +616,12 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     } finally {
       setIsFetchingImageKey(false)
     }
+  }
+
+  const handleCancelImageKey = () => {
+    imageKeyAbortRef.current = true
+    setImageKeyStatus('已取消')
+    setIsFetchingImageKey(false)
   }
 
   useEffect(() => {
@@ -1164,6 +1179,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                       {typeof imageKeyPercent === 'number' && Number.isFinite(imageKeyPercent) && (
                         <span className="status-text">{Math.max(0, Math.min(100, imageKeyPercent)).toFixed(1)}%</span>
                       )}
+                      <button className="btn btn-ghost btn-sm" onClick={handleCancelImageKey} style={{ marginLeft: 'auto', padding: '2px 10px', height: 24, fontSize: 12, color: '#999' }}>取消</button>
                     </div>
                   </div>
                 ) : (
@@ -1171,7 +1187,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                 )}
 
                 <div className="field-hint" style={{ marginTop: '8px' }}>
-                  图片密钥已改为自动计算。仅当“缓存计算 + 本地校验通过”时会自动跳过本步骤；若失败可使用内存扫描兜底。
+                  图片密钥用于解密聊天图片，可选填。仅当"缓存计算 + 本地校验通过"时会自动跳过本步骤；若失败可使用内存扫描兜底，也可直接点击"下一步"跳过。
                 </div>
                 {isImageKeyVerified && (
                   <div className="status-message is-success" style={{ marginTop: '8px' }}>
