@@ -232,6 +232,19 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     }
   }, [isDbConnected, standalone, navigate])
 
+  // 进入「数据库目录」步骤时自动触发路径检测
+  const autoDetectDoneRef = useRef(false)
+  useEffect(() => {
+    if (currentStep.id === 'db' && !dbPath && !autoDetectDoneRef.current) {
+      autoDetectDoneRef.current = true
+      handleAutoDetectPath()
+    }
+    // 切换走再回来时允许重新检测
+    if (currentStep.id !== 'db') {
+      autoDetectDoneRef.current = false
+    }
+  }, [currentStep.id, dbPath])
+
   useEffect(() => {
     setWxidOptions([])
     setWxid('')

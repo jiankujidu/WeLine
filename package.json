@@ -1,6 +1,6 @@
 {
   "name": "weline",
-  "version": "4.3.6",
+  "version": "4.3.7",
   "description": "WeLine - 微信聊天记录查看、分析与导出工具（基于 WeFlow 修改，原作者 @hicccc77）",
   "main": "dist-electron/main.js",
   "author": {

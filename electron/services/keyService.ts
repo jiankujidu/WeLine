@@ -1094,6 +1094,7 @@ export class KeyService {
   // --- 数据库密钥内存扫描（已登录微信时无需重新登录）---
   // 扫描微信进程 RW 内存区域，寻找 64 位十六进制字符串（32 字节密钥）
   // 返回候选密钥列表，由调用方通过 wcdbService.testConnection() 验证
+  // v4.3.6+: 增加候选质量过滤（字符多样性）+ 数量上限（50），减少假阳性
 
   async scanMemoryForDbKeyCandidates(
     onProgress?: (msg: string) => void
@@ -1120,7 +1121,6 @@ export class KeyService {
     if (!hProcess) { onProgress?.('无法打开微信进程（权限不足？）'); return [] }
 
     try {
-      // 枚举 RW 区域
       const regions: Array<[number, number]> = []
       let addr = 0n
       const mbi = Buffer.alloc(MBI_SIZE)
@@ -1147,9 +1147,10 @@ export class KeyService {
 
       onProgress?.(`找到 ${regions.length} 个可扫描内存区域，开始搜索密钥...`)
 
-      const CHUNK = 4 * 1024 * 1024 // 4MB chunks
-      const candidates = new Set<string>()
+      const CHUNK = 4 * 1024 * 1024
+      const rawCandidates = new Set<string>()
       const HEX_CHARS = new Set('0123456789abcdefABCDEF')
+      const MAX_CANDIDATES = 50
       let regionIndex = 0
 
       for (const [base, size] of regions) {
@@ -1160,7 +1161,7 @@ export class KeyService {
         }
 
         let offset = 0
-        while (offset < size) {
+        while (offset < size && rawCandidates.size < MAX_CANDIDATES * 3) {
           const chunkSize = Math.min(CHUNK, size - offset)
           const buf = Buffer.alloc(chunkSize)
           const bytesReadOut = [0]
@@ -1168,21 +1169,21 @@ export class KeyService {
           if (!ok || bytesReadOut[0] === 0) { offset += chunkSize; continue }
           const data = buf.subarray(0, bytesReadOut[0])
 
-          // 搜索 ASCII 格式：连续 64 个 hex 字符，前后非 hex 字符
-          for (let i = 0; i <= data.length - 66; i++) {
-            if (HEX_CHARS.has(String.fromCharCode(data[i]))) continue // 前面不能是 hex
+          // ASCII 格式：连续 64 个 hex 字符，前后非 hex
+          for (let i = 0; i <= data.length - 66 && rawCandidates.size < MAX_CANDIDATES * 3; i++) {
+            if (HEX_CHARS.has(String.fromCharCode(data[i]))) continue
             let valid = true
             for (let j = 1; j <= 64; j++) {
               if (!HEX_CHARS.has(String.fromCharCode(data[i + j]))) { valid = false; break }
             }
             if (!valid) continue
-            if (i + 65 < data.length && HEX_CHARS.has(String.fromCharCode(data[i + 65]))) continue // 后面也不能是 hex
+            if (i + 65 < data.length && HEX_CHARS.has(String.fromCharCode(data[i + 65]))) continue
             const candidate = data.subarray(i + 1, i + 65).toString('ascii')
-            candidates.add(candidate.toLowerCase())
+            rawCandidates.add(candidate.toLowerCase())
           }
 
-          // 搜索 UTF-16LE 格式
-          for (let i = 0; i <= data.length - 131; i++) {
+          // UTF-16LE 格式
+          for (let i = 0; i <= data.length - 131 && rawCandidates.size < MAX_CANDIDATES * 3; i++) {
             let valid = true
             for (let j = 0; j < 64; j++) {
               const ch = data[i + j * 2]
@@ -1193,17 +1194,110 @@ export class KeyService {
             if (i + 129 < data.length && data[i + 128] === 0x00 && HEX_CHARS.has(String.fromCharCode(data[i + 128]))) continue
             const keyBytes = Buffer.alloc(64)
             for (let j = 0; j < 64; j++) keyBytes[j] = data[i + j * 2]
-            candidates.add(keyBytes.toString('ascii').toLowerCase())
+            rawCandidates.add(keyBytes.toString('ascii').toLowerCase())
           }
 
           offset += chunkSize
         }
       }
 
-      onProgress?.(`扫描完成，找到 ${candidates.size} 个候选密钥`)
-      return Array.from(candidates)
+      // 候选过滤：字符多样性 >= 8 种不同字符（过滤掉 "0000..."/"aaaa..." 等假阳性）
+      const filtered: string[] = []
+      for (const c of rawCandidates) {
+        if (filtered.length >= MAX_CANDIDATES) break
+        const uniqueChars = new Set(c.split(''))
+        if (uniqueChars.size >= 8) {
+          filtered.push(c)
+        }
+      }
+
+      onProgress?.(`扫描完成：原始 ${rawCandidates.size} 个 → 过滤后 ${filtered.length} 个高质量候选`)
+      return filtered
     } finally {
       this.CloseHandle(hProcess)
+    }
+  }
+
+  // --- 从微信本地配置/注册表尝试读取数据库密钥 ---
+  // 某些版本的微信会将密钥信息缓存在本地文件或注册表中
+
+  async tryReadKeyFromLocalConfig(
+    onProgress?: (msg: string) => void
+  ): Promise<string | null> {
+    if (!this.ensureWin32()) return null
+
+    onProgress?.('正在从微信本地配置中查找密钥...')
+
+    try {
+      const home = os.homedir()
+      const candidates: string[] = []
+
+      // 1. 尝试从 WeChat 数据目录的配置文件读取
+      const xwechatDirs = [
+        join(home, 'Documents', 'xwechat_files'),
+        join(home, 'Documents', 'WeChat Files'),
+      ]
+
+      for (const dir of xwechatDirs) {
+        if (!existsSync(dir)) continue
+        try {
+          const { readdirSync } = await import('fs')
+          const accounts = readdirSync(dir).filter((f: string) => f.startsWith('wxid_'))
+          for (const acc of accounts) {
+            const accDir = join(dir, acc)
+            // 检查常见的配置文件位置
+            const configPaths = [
+              join(accDir, 'config', 'db_key.txt'),
+              join(accDir, 'config', 'db_info.json'),
+              join(accDir, '.db_key'),
+              join(accDir, 'db_key'),
+            ]
+            for (const cp of configPaths) {
+              if (!existsSync(cp)) continue
+              try {
+                const { readFileSync } = await import('fs')
+                const content = readFileSync(cp, 'utf8').trim()
+                // 密钥通常是 64 位 hex
+                if (/^[0-9a-fA-F]{64}$/.test(content)) {
+                  candidates.push(content.toLowerCase())
+                  onProgress?.(`在 ${cp} 找到可能的密钥`)
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      // 2. 尝试从注册表读取（某些版本存储在注册表中）
+      try {
+        const regPaths = [
+          'Software\\Tencent\\WeChat',
+          'Software\\Tencent\\Weixin',
+        ]
+        for (const rp of regPaths) {
+          const val = this.readRegistryString(this.HKEY_CURRENT_USER, rp, 'DBKey')
+          if (val && /^[0-9a-fA-F]{64}$/.test(val)) {
+            candidates.push(val.toLowerCase())
+            onProgress?.('在注册表中找到可能的密钥')
+          }
+          const val2 = this.readRegistryString(this.HKEY_CURRENT_USER, rp, 'SqlCipherKey')
+          if (val2 && /^[0-9a-fA-F]{64}$/.test(val2)) {
+            candidates.push(val2.toLowerCase())
+            onProgress?.('在注册表中找到 SqlCipherKey')
+          }
+        }
+      } catch { /* ignore */ }
+
+      if (candidates.length > 0) {
+        onProgress?.(`从本地配置找到 ${candidates.length} 个候选密钥`)
+        return candidates[0] // 返回第一个，由调用方验证
+      }
+
+      onProgress?.('本地配置中未找到密钥信息')
+      return null
+    } catch (e) {
+      onProgress?.(`读取本地配置失败: ${e}`)
+      return null
     }
   }
 }
