@@ -3919,14 +3919,58 @@ function registerIpcHandlers() {
 
   // 密钥获取（Hook 优先 + 内存扫描兜底）
   ipcMain.handle('key:autoGetDbKey', async (event) => {
-    // 先尝试 Hook 方式（需要重新登录微信）
+    // 快速检测：若微信已登录，跳过 Hook（Hook 只在登录事件瞬间捕获密钥），直接走内存扫描
+    const quickPid = await keyService.findWeChatPid?.()
+    if (quickPid) {
+      const alreadyLoggedIn = !(await keyService.detectWeChatLoginRequired?.(quickPid))
+      if (alreadyLoggedIn) {
+        event.sender.send('key:dbKeyStatus', { message: '检测到微信已登录，跳过 Hook 直接使用内存扫描获取密钥...', level: 0 })
+
+        try {
+          const candidates = await keyService.scanMemoryForDbKeyCandidates((msg: string) => {
+            event.sender.send('key:dbKeyStatus', { message: msg, level: 0 })
+          })
+
+          if (candidates.length > 0) {
+            event.sender.send('key:dbKeyStatus', { message: `找到 ${candidates.length} 个候选密钥，正在验证...`, level: 0 })
+            const dbPath = configService?.get('dbPath')
+            const wxid = configService?.get('myWxid')
+
+            if (!dbPath || !wxid) {
+              event.sender.send('key:dbKeyStatus', { message: '无法自动验证（请先选择数据库目录），已将首个候选填入', level: 1 })
+              return { success: true, key: candidates[0], logs: ['内存扫描获取（未验证，已登录快速模式）'] }
+            }
+
+            for (let i = 0; i < Math.min(candidates.length, 20); i++) {
+              event.sender.send('key:dbKeyStatus', { message: `验证候选 ${i + 1}/${Math.min(candidates.length, 20)}...`, level: 0 })
+              try {
+                const verifyResult = await wcdbService.testConnection(dbPath, candidates[i], wxid)
+                if (verifyResult.success) {
+                  event.sender.send('key:dbKeyStatus', { message: '密钥获取成功（内存扫描+验证通过）', level: 1 })
+                  return { success: true, key: candidates[i], logs: [`内存扫描验证命中（已登录快速模式）：第 ${i + 1} 个候选`] }
+                }
+              } catch { /* 继续 */ }
+            }
+
+            event.sender.send('key:dbKeyStatus', { message: `${candidates.length} 个候选均未通过验证`, level: 2 })
+            return { success: false, error: '内存扫描：所有候选密钥均无法打开数据库', logs: [`找到 ${candidates.length} 个候选但均未验证通过`] }
+          }
+
+          event.sender.send('key:dbKeyStatus', { message: '内存扫描未找到候选密钥，尝试 Hook 方式...', level: 0 })
+        } catch (e) {
+          event.sender.send('key:dbKeyStatus', { message: `内存扫描异常: ${e}，回退到 Hook 方式...`, level: 0 })
+        }
+      }
+    }
+
+    // Hook 方式（需要重新登录微信 / 内存扫描也失败时的兜底）
     const hookResult = await keyService.autoGetDbKey(180_000, (message: string, level: number) => {
       event.sender.send('key:dbKeyStatus', { message, level })
     })
 
     if (hookResult.success) return hookResult
 
-    // Hook 失败后，尝试内存扫描（已登录微信时无需重新登录）
+    // Hook 失败后，尝试内存扫描
     const logs = hookResult.logs || []
     const isTimeout = hookResult.error?.includes('超时')
     const isLoginRequired = hookResult.error?.includes('尚未完成登录') || hookResult.error?.includes('现在登录')
@@ -3946,17 +3990,14 @@ function registerIpcHandlers() {
 
         event.sender.send('key:dbKeyStatus', { message: `找到 ${candidates.length} 个候选密钥，正在验证...`, level: 0 })
 
-        // 需要数据库路径来验证 — 从 configService 获取
         const dbPath = configService?.get('dbPath')
         const wxid = configService?.get('myWxid')
 
         if (!dbPath || !wxid) {
-          // 没有路径信息时返回第一个候选（让用户手动填入）
           event.sender.send('key:dbKeyStatus', { message: '无法自动验证（请先选择数据库目录），已将首个候选填入', level: 1 })
           return { success: true, key: candidates[0], logs: [...logs, '内存扫描获取（未验证）'] }
         }
 
-        // 用 wcdbService 验证每个候选
         for (let i = 0; i < Math.min(candidates.length, 20); i++) {
           const candidate = candidates[i]
           event.sender.send('key:dbKeyStatus', { message: `验证候选 ${i + 1}/${Math.min(candidates.length, 20)}...`, level: 0 })
