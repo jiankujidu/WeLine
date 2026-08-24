@@ -632,6 +632,8 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         setIsImageStepAutoCompleted(false)
         if (!options?.silentError) {
           setError(result.error || '自动获取图片密钥失败')
+          // 缓存计算失败，自动切到内存扫描兜底
+          setTimeout(() => handleScanImageKeyFromMemory(), 800)
         }
       }
     } catch (e) {

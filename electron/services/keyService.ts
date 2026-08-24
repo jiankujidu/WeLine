@@ -863,24 +863,24 @@ export class KeyService {
 
       onProgress?.(`已找到微信进程 PID=${pid}，正在扫描内存...`)
 
-      // 3. 持续轮询内存扫描，最多 60 秒
-      const deadline = Date.now() + 60_000
+      // 3. 持续轮询内存扫描，最多 120 秒
+      const deadline = Date.now() + 120_000
       let scanCount = 0
+      let totalRegions = 0
       while (Date.now() < deadline) {
         scanCount++
-        onProgress?.(`第 ${scanCount} 次扫描内存，请在微信中打开图片大图...`)
-        const aesKey = await this._scanMemoryForAesKey(pid, ciphertext, onProgress)
+        const aesKey = await this._scanMemoryForAesKey(pid, ciphertext, onProgress, totalRegions)
         if (aesKey) {
           onProgress?.('密钥获取成功')
           return { success: true, xorKey, aesKey }
         }
-        // 等 5 秒再试
-        await new Promise(r => setTimeout(r, 5000))
+        // 等 6 秒再试（给微信留出打开大图的时间）
+        await new Promise(r => setTimeout(r, 6000))
       }
 
       return {
         success: false,
-        error: '60 秒内未找到 AES 密钥。\n请确保已在微信中打开 2-3 张图片大图后再试。'
+        error: `120 秒内未找到 AES 密钥（扫描 ${regionCount} 个内存区域）。请确保已在微信中打开 2-3 张图片大图后重试。`
       }
     } catch (e) {
       return { success: false, error: `内存扫描失败: ${e}` }
@@ -947,7 +947,8 @@ export class KeyService {
   private async _scanMemoryForAesKey(
     pid: number,
     ciphertext: Buffer,
-    onProgress?: (msg: string) => void
+    onProgress?: (msg: string) => void,
+    lastRegionCount?: number
   ): Promise<string | null> {
     if (!this.ensureKernel32()) return null
 
@@ -970,6 +971,7 @@ export class KeyService {
       const regions: Array<[number, number]> = []
       let addr = 0
       const mbi = Buffer.alloc(MBI_SIZE)
+      let regionCount = lastRegionCount || 0
 
       while (addr < 0x7FFFFFFFFFFF) {
         const ret = VirtualQueryEx(hProcess, addr, mbi, MBI_SIZE)
@@ -993,6 +995,7 @@ export class KeyService {
             (protect & RW_FLAGS) !== 0 &&
             size <= 50 * 1024 * 1024) {
           regions.push([base, size])
+          regionCount++
         }
         const next = base + size
         if (next <= addr) break
@@ -1000,15 +1003,15 @@ export class KeyService {
       }
 
       const totalMB = regions.reduce((s, [, sz]) => s + sz, 0) / 1024 / 1024
-      onProgress?.(`扫描 ${regions.length} 个 RW 区域 (${totalMB.toFixed(0)} MB)...`)
+      onProgress?.(`扫描 ${regions.length} 个 RW 区域 (${totalMB.toFixed(0)} MB)... 累计 ${regionCount} 区域`)
 
       const CHUNK = 4 * 1024 * 1024
       const OVERLAP = 65
 
       for (let i = 0; i < regions.length; i++) {
         const [base, size] = regions[i]
-        if (i % 20 === 0) {
-          onProgress?.(`扫描进度 ${i}/${regions.length}...`)
+        if (i % 50 === 0) {
+          onProgress?.(`扫描进度 ${i}/${regions.length} (累计 ${regionCount} 区域)`)
           await new Promise(r => setTimeout(r, 1)) // 让出事件循环
         }
 
