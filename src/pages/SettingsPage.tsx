@@ -4675,7 +4675,10 @@ function SettingsPage({ onClose }: SettingsPageProps = {}) {
           <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://chatlab.fun') }}>ChatLab</a>
           <span>·</span>
           <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.window.openAgreementWindow() }}>用户协议</a>
+          <span>·</span>
+          <a href="#" onClick={(e) => { e.preventDefault(); window.electronAPI.shell.openExternal('https://qm.qq.com/q/y5Nzu7bVWS') }}>QQ 交流群</a>
         </div>
+        <p className="about-desc" style={{ marginTop: '8px' }}>公众号：一起瞎折腾（微信搜索关注）</p>
         <p className="copyright">© 2026 WeLine. All rights reserved.</p>
 
         <div className="log-toggle-line" style={{ marginTop: '16px', justifyContent: 'center' }}>
