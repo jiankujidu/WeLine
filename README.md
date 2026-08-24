@@ -23,7 +23,7 @@ WeLine 是一个**完全本地**的微信**实时**聊天记录查看、分析�
   <a href="https://github.com/jiankujidu/WeLine/issues"><img src="https://img.shields.io/github/issues/jiankujidu/WeLine?style=flat&label=Issues&labelColor=1F2937&color=D97706" alt="Issues"></a>
   <a href="https://github.com/jiankujidu/WeLine/releases"><img src="https://img.shields.io/github/downloads/jiankujidu/WeLine/total?style=flat&label=Downloads&labelColor=1F2937&color=059669" alt="Downloads"></a>
   <br><br>
-  <a href="https://t.me/weflow_cc"><img src="https://img.shields.io/badge/Telegram-频道-1D9BF0?style=flat&logo=telegram&logoColor=white&labelColor=1F2937&color=1D9BF0" alt="Telegram Channel" style="height: 22px; vertical-align: middle;"></a>
+  <a href="https://qm.qq.com/"><img src="https://img.shields.io/badge/QQ群-1103532710-12B7F5?style=flat&logo=tencentqq&logoColor=white&labelColor=1F2937&color=12B7F5" alt="QQ 交流群 1103532710" style="height: 22px; vertical-align: middle;"></a>
   <a href="https://www.star-history.com/jiankujidu/WeLine"><img src="https://api.star-history.com/badge?repo=jiankujidu/WeLine&theme=dark" alt="Star History Rank" style="height: 32px; vertical-align: middle;"></a>
 </p>
 
