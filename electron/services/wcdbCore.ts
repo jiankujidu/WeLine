@@ -1253,9 +1253,17 @@ export class WcdbCore {
       // 初始化
       const initResult = this.wcdbInit()
       if (initResult !== 0) {
-        console.error('WCDB 初始化失败:', initResult)
-        lastDllInitError = this.formatInitProtectionError(initResult)
-        return false
+        // 保护校验软错误（-101 / -102 / -1006）：改名 / 重打包构建会触发该返回值，
+        // 但核心 WCDB 功能（wcdb_open_account 等）仍可正常工作。
+        // 与 InitProtection 的处理保持一致——按警告忽略并继续初始化，
+        // 避免发布版一启动就弹出“WeLine 启动失败 / 错误码:-1006”。
+        if (initResult === -101 || initResult === -102 || initResult === -1006) {
+          this.writeLog(`[bootstrap] wcdb_init 返回保护软错误 ${initResult}，忽略并继续初始化`, true)
+        } else {
+          console.error('WCDB 初始化失败:', initResult)
+          lastDllInitError = this.formatInitProtectionError(initResult)
+          return false
+        }
       }
 
       this.initialized = true
