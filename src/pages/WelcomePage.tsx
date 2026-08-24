@@ -46,22 +46,22 @@ const INTRO_FEATURES: ReadonlyArray<{
   {
     Icon: ShieldCheck,
     title: '本地优先',
-    desc: '数据全程不离开本机，不上传任何服务器'
+    desc: '数据全程不离开本机'
   },
   {
     Icon: UserRound,
     title: '多账号切换',
-    desc: '自动扫描本机的全部微信账号，按需切换'
+    desc: '自动扫描本机微信账号'
   },
   {
     Icon: BarChart3,
     title: '深度分析',
-    desc: '聊天统计、年度报告、年度热词一应俱全'
+    desc: '聊天统计与年度报告'
   },
   {
     Icon: Download,
     title: '灵活导出',
-    desc: 'CSV / JSON / HTML，兼容第三方分析工具'
+    desc: 'CSV / JSON / HTML'
   }
 ]
 
@@ -899,25 +899,10 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
           </div>
         )}
 
-        <div className="welcome-shell is-success-shell">
-          <aside className="welcome-aside">
-            <div className="aside-brand">
-              <img src="./logo.png" alt="WeLine" className="aside-logo" />
-              <div className="aside-brand-meta">
-                <span className="aside-brand-name">WeLine</span>
-                <span className="aside-brand-tag">已连接 · Connected</span>
-              </div>
-            </div>
-            <div className="aside-spacer" />
-            <div className="aside-footer">
-              <ShieldCheck size={13} />
-              <span>本地安全存储</span>
-            </div>
-          </aside>
-
+        <div className="welcome-shell welcome-shell--center">
           <main className="welcome-main is-success">
             <div className="success-content">
-              <div className="success-icon"><CheckCircle2 size={36} /></div>
+              <div className="success-icon"><CheckCircle2 size={34} /></div>
               <h1 className="success-title">配置已完成</h1>
               <p className="success-desc">数据库已连接，你可以直接进入首页使用全部功能。</p>
               <button
@@ -957,66 +942,19 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
         </div>
       )}
 
-      <div className="welcome-shell">
-        {/* === Sidebar === */}
-        <aside className="welcome-aside">
-          <div className="aside-brand">
-            <img src="./logo.png" alt="WeLine" className="aside-logo" />
-            <div className="aside-brand-meta">
-              <span className="aside-brand-name">WeLine</span>
-              <span className="aside-brand-tag">本地数据向导 · v4.3.7</span>
-            </div>
-          </div>
-
-          <nav className="aside-nav" aria-label="配置步骤">
-            {steps.map((step, index) => {
-              const completed = isStepCompleted(index, step.id)
-              const active = index === stepIndex
-              const status = active ? 'active' : completed ? 'completed' : 'future'
-              return (
-                <div
-                  key={step.id}
-                  className={`aside-step ${status}`}
-                  onClick={() => jumpToStep(step.id)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="aside-step-dot">
-                    {completed
-                      ? <CheckCircle2 size={12} />
-                      : <span>{index + 1}</span>}
-                  </div>
-                  <div className="aside-step-title">{step.title}</div>
-                </div>
-              )
-            })}
-          </nav>
-
-          <div className="aside-footer">
-            <ShieldCheck size={13} />
-            <span>数据仅在本地处理，不上传服务器</span>
-          </div>
-        </aside>
-
-        {/* === Main === */}
+      <div className="welcome-shell welcome-shell--center">
         <main className="welcome-main">
-          <header className="main-header">
-            <p className="main-eyebrow">第 {stepIndex + 1} 步 / 共 {steps.length} 步</p>
-            <h2>{currentStep.title}</h2>
-            <p className="main-subtitle">{resolveStepDesc(currentStep)}</p>
-            {isAddAccountMode && (
-              <p className="main-mode-tip">
-                <Sparkles size={13} />
-                添加账号模式：其他步骤已沿用当前配置，只需重新获取数据库密钥。
-              </p>
-            )}
+          <header className="welcome-topbar">
+            <div className="topbar-row">
+              <span className="step-count">第 {stepIndex + 1} 步 / 共 {steps.length} 步</span>
+              <span className="step-name">{currentStep.title}</span>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${stepProgress}%` }} />
+            </div>
           </header>
 
-          <div className="main-progress">
-            <div className="main-progress-fill" style={{ width: `${stepProgress}%` }} />
-          </div>
-
-          <div className="main-body">
+          <div className="welcome-body">
             {currentStep.id === 'intro' && (
               <div className="intro">
                 <div className="intro-logo">
@@ -1030,10 +968,12 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                   {INTRO_FEATURES.map((feature, idx) => {
                     const Icon = feature.Icon
                     return (
-                      <div key={idx} className="feature-card">
-                        <div className="feature-card-icon"><Icon size={18} /></div>
-                        <div className="feature-card-title">{feature.title}</div>
-                        <div className="feature-card-desc">{feature.desc}</div>
+                      <div key={idx} className="feature-row">
+                        <span className="feature-ico"><Icon size={16} /></span>
+                        <div className="feature-text">
+                          <span className="feature-title">{feature.title}</span>
+                          <span className="feature-desc">{feature.desc}</span>
+                        </div>
                       </div>
                     )
                   })}
@@ -1044,15 +984,13 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
             {currentStep.id === 'db' && (
               <div className="form-group">
                 <label className="field-label">数据库根目录</label>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="field-input"
-                    placeholder={dbPathPlaceholder}
-                    value={dbPath}
-                    onChange={(e) => handleDbPathChange(e.target.value)}
-                  />
-                </div>
+                <input
+                  type="text"
+                  className="field-input"
+                  placeholder={dbPathPlaceholder}
+                  value={dbPath}
+                  onChange={(e) => handleDbPathChange(e.target.value)}
+                />
                 <div className="action-row">
                   <button className="btn btn-secondary" onClick={handleAutoDetectPath} disabled={isDetectingPath}>
                     <FolderSearch size={16} />
@@ -1070,15 +1008,13 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
             {currentStep.id === 'cache' && (
               <div className="form-group">
                 <label className="field-label">缓存目录</label>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="field-input"
-                    placeholder="留空即使用默认目录"
-                    value={cachePath}
-                    onChange={(e) => setCachePath(e.target.value)}
-                  />
-                </div>
+                <input
+                  type="text"
+                  className="field-input"
+                  placeholder="留空即使用默认目录"
+                  value={cachePath}
+                  onChange={(e) => setCachePath(e.target.value)}
+                />
                 <div className="action-row">
                   <button className="btn btn-secondary" onClick={handleSelectCachePath}>
                     <FolderOpen size={16} />
@@ -1345,7 +1281,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
             </div>
           )}
 
-          <div className="main-actions">
+          <div className="welcome-actions">
             <button
               className="btn btn-ghost"
               onClick={handleBack}

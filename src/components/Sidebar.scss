@@ -116,13 +116,13 @@
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    border-color: rgba(99, 102, 241, 0.32);
+    border-color: var(--border-color);
     background: var(--bg-tertiary);
   }
 
   &.menu-open {
-    border-color: rgba(99, 102, 241, 0.44);
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12);
+    border-color: var(--border-color);
+    box-shadow: 0 0 0 2px var(--primary-light);
   }
 
   .user-avatar {
@@ -197,7 +197,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 9999px;
+  border-radius: 10px;
   color: var(--text-secondary);
   text-decoration: none;
   transition: all 0.2s ease;

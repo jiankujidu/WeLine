@@ -42,6 +42,17 @@
 
   // primary 色上方的前景文字色（大多数主题为白色）
   --on-primary: white;
+
+  // 极简尺度（统一圆角 / 间距，供全站复用）
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
 }
 
 // ==================== 浅色主题 ====================
@@ -54,16 +65,16 @@
   --primary-hover: #7A6548;
   --primary-light: rgba(139, 115, 85, 0.1);
   --bg-primary: #F0EEE9;
-  --bg-secondary: rgba(255, 255, 255, 0.7);
+  --bg-secondary: rgba(255, 255, 255, 0.72);
   --bg-tertiary: rgba(0, 0, 0, 0.03);
   --bg-hover: rgba(0, 0, 0, 0.05);
   --text-primary: #3d3d3d;
   --text-secondary: #666666;
   --text-tertiary: #999999;
-  --border-color: rgba(0, 0, 0, 0.08);
+  --border-color: rgba(0, 0, 0, 0.06);
   --bg-gradient: linear-gradient(135deg, #F0EEE9 0%, #E8E6E1 100%);
   --primary-gradient: linear-gradient(135deg, #8B7355 0%, #A68B5B 100%);
-  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-bg: rgba(255, 255, 255, 0.78);
   --card-inner-bg: #FAFAF7;
   --sent-card-bg: var(--primary);
 }
@@ -234,7 +245,7 @@
   --text-primary: #F0EEE9;
   --text-secondary: #b3b0aa;
   --text-tertiary: #807d78;
-  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color: rgba(255, 255, 255, 0.08);
   --bg-gradient: linear-gradient(135deg, #1a1816 0%, #252220 100%);
   --primary-gradient: linear-gradient(135deg, #8B7355 0%, #C9A86C 100%);
   --card-bg: rgba(40, 36, 32, 0.9);
@@ -530,4 +541,82 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// ==================== 极简基础组件（全局复用） ====================
+// 面板：轻边框 + 柔阴影 + 统一圆角
+.panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+}
+
+// 分组标题：小字、弱色、字距
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-2);
+}
+
+// 横向列表行：轻分割线
+.hl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .hl-row-label {
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .hl-row-desc {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+}
+
+// 轻量分割线
+.hl-divider {
+  height: 1px;
+  background: var(--border-color);
+  border: none;
+  margin: var(--space-3) 0;
+}
+
+// 安静的空状态
+.hl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: var(--space-5) var(--space-3);
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+// 轻量胶囊标签
+.hl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
 }
