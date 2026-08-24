@@ -513,13 +513,13 @@ class ChatService {
 
     const code = this.extractErrorCode(errorMessage)
     if (code === null) return
+    // 仅对真正的硬错误弹“启动失败”：DLL 加载/初始化异常（-2299 / -2301 / -2302）
+    // 以及清单 / 签名 / 哈希校验失败（-2201 ~ -2212）。
+    // -101 / -102 / -1006 属于改名 / 重打包触发的保护软错误，核心功能正常，不再阻断启动。
     const isSecurityCode =
-      code === -101 ||
-      code === -102 ||
       code === -2299 ||
       code === -2301 ||
       code === -2302 ||
-      code === -1006 ||
       (code <= -2201 && code >= -2212)
     if (!isSecurityCode) return
 
