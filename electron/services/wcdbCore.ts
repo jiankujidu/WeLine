@@ -344,6 +344,7 @@ export class WcdbCore {
       '-2301': '动态库加载失败，请检查安装是否完整',
       '-2302': 'WCDB 初始化异常，请重试',
       '-2303': 'WCDB 未能成功初始化',
+      '-1005': '安装包保护校验未通过（通常由重打包或改名触发），核心功能仍可继续使用',
     }
     const msg = messages[String(code) as unknown as keyof typeof messages]
     return msg ? `${msg} (错误码: ${code})` : `操作失败，错误码: ${code}`
@@ -661,9 +662,9 @@ export class WcdbCore {
   async initialize(): Promise<boolean> {
     if (this.initialized) return true
 
-    // 保护校验软错误（-101 / -102 / -1006）：改名 / 重打包构建会触发，核心 WCDB 功能不受影响，
+    // 保护校验软错误（-101 / -102 / -1005 / -1006）：改名 / 重打包构建会触发，核心 WCDB 功能不受影响，
     // 按警告忽略并继续初始化。InitProtection 与 wcdb_init 共用同一份白名单。
-    const SOFT_PROTECTION_ERRORS = new Set([-101, -102, -1006])
+    const SOFT_PROTECTION_ERRORS = new Set([-101, -102, -1005, -1006])
 
     try {
       this.koffi = require('koffi')
