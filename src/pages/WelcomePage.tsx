@@ -4,9 +4,9 @@ import { useAppStore } from '../stores/appStore'
 import { dialog } from '../services/ipc'
 import * as configService from '../services/config'
 import {
-  ArrowLeft, ArrowRight, CheckCircle2, Database, Eye, EyeOff,
+  ArrowLeft, ArrowRight, BarChart3, CheckCircle2, Database, Download, Eye, EyeOff,
   FolderOpen, FolderSearch, KeyRound, ShieldCheck, Sparkles,
-  UserRound, Wand2, Minus, X, HardDrive, RotateCcw
+  UserRound, Minus, X, RotateCcw
 } from 'lucide-react'
 import ConfirmDialog from '../components/ConfirmDialog'
 import './WelcomePage.scss'
@@ -24,12 +24,12 @@ const dbPathPlaceholder = isMac
         : '例如: C:\\Users\\xxx\\Documents\\xwechat_files'
 
 const steps = [
-  { id: 'intro', title: '欢迎', desc: '准备开始你的本地数据探索' },
-  { id: 'db', title: '数据库目录', desc: `定位 xwechat_files 目录` },
+  { id: 'intro', title: '欢迎使用', desc: '快速了解 WeLine 的主要能力，然后开始配置' },
+  { id: 'db', title: '数据库目录', desc: '定位 xwechat_files 目录' },
   { id: 'cache', title: '缓存目录', desc: '设置本地缓存存储位置（可选）' },
   { id: 'key', title: '解密密钥', desc: '获取密钥与自动识别账号' },
   { id: 'image', title: '图片密钥', desc: '获取 XOR 与 AES 密钥' },
-  { id: 'security', title: '安全防护', desc: '保护你的数据' }
+  { id: 'security', title: '安全防护', desc: '保护你的本地数据' }
 ]
 type SetupStepId = typeof steps[number]['id']
 type ImageKeyResolveSource = 'manual-cache' | 'prefetch-cache' | 'memory-scan'
@@ -37,6 +37,33 @@ type ImageKeyResolveSource = 'manual-cache' | 'prefetch-cache' | 'memory-scan'
 interface WelcomePageProps {
   standalone?: boolean
 }
+
+const INTRO_FEATURES: ReadonlyArray<{
+  Icon: typeof ShieldCheck
+  title: string
+  desc: string
+}> = [
+  {
+    Icon: ShieldCheck,
+    title: '本地优先',
+    desc: '数据全程不离开本机，不上传任何服务器'
+  },
+  {
+    Icon: UserRound,
+    title: '多账号切换',
+    desc: '自动扫描本机的全部微信账号，按需切换'
+  },
+  {
+    Icon: BarChart3,
+    title: '深度分析',
+    desc: '聊天统计、年度报告、年度热词一应俱全'
+  },
+  {
+    Icon: Download,
+    title: '灵活导出',
+    desc: 'CSV / JSON / HTML，兼容第三方分析工具'
+  }
+]
 
 const formatDbKeyFailureMessage = (error?: string, logs?: string[]): string => {
   const base = String(error || '自动获取密钥失败').trim()
@@ -96,7 +123,10 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
   const { isDbConnected, setDbConnected, setLoading } = useAppStore()
   const isAddAccountMode = standalone && new URLSearchParams(location.search).get('mode') === 'add-account'
 
+  // === Step state ===
   const [stepIndex, setStepIndex] = useState(0)
+
+  // === Form state ===
   const [dbPath, setDbPath] = useState('')
   const [decryptKey, setDecryptKey] = useState('')
   const [imageXorKey, setImageXorKey] = useState('')
@@ -111,6 +141,8 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
   }>>([])
   const [showWxidSelect, setShowWxidSelect] = useState(false)
   const wxidSelectRef = useRef<HTMLDivElement>(null)
+
+  // === Status / loading flags ===
   const [error, setError] = useState('')
   const [isConnecting, setIsConnecting] = useState(false)
   const [isDetectingPath, setIsDetectingPath] = useState(false)
@@ -131,7 +163,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
   const imagePrefetchAttemptRef = useRef<string>('')
   const imageKeyAbortRef = useRef(false)  // 用于取消图片密钥获取/扫描
 
-  // 安全相关 state
+  // === Auth state ===
   const [enableAuth, setEnableAuth] = useState(false)
   const [authPassword, setAuthPassword] = useState('')
   const [authConfirmPassword, setAuthConfirmPassword] = useState('')
@@ -139,45 +171,19 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
   const [helloAvailable, setHelloAvailable] = useState(false)
   const [isSettingHello, setIsSettingHello] = useState(false)
 
-  // 检查 Hello 可用性
+  // === Derived step data — declared before any useEffect that references currentStep,
+  //     so tsc stops complaining about TS2448 used-before-declared. ===
+  const imageStepIndex = steps.findIndex(step => step.id === 'image')
+  const securityStepIndex = steps.findIndex(step => step.id === 'security')
+  const currentStep = steps[stepIndex] ?? steps[0]
+  const imagePreCompletedAhead = isImageStepAutoCompleted && imageStepIndex >= 0 && stepIndex < imageStepIndex
+  const rootClassName = `welcome-page${isClosing ? ' is-closing' : ''}${standalone ? ' is-standalone' : ''}`
+  const showWindowControls = standalone
+
+  // === Effects ===
   useEffect(() => {
     setHelloAvailable(isWindows)
   }, [])
-
-  async function sha256(message: string) {
-    const msgBuffer = new TextEncoder().encode(message)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-    return hashHex
-  }
-
-  const handleSetupHello = async () => {
-    if (!isWindows) {
-      setError('当前系统不支持 Windows Hello')
-      return
-    }
-    if (!authPassword || authPassword !== authConfirmPassword) {
-      setError('请先设置并确认应用密码，再开启 Windows Hello')
-      return
-    }
-
-    setIsSettingHello(true)
-    try {
-      const result = await window.electronAPI.auth.hello('请验证您的身份以开启 Windows Hello')
-      if (!result.success) {
-        setError(`Windows Hello 设置失败: ${result.error || '验证失败'}`)
-        return
-      }
-
-      setEnableHello(true)
-      setError('')
-    } catch (e: any) {
-      setError(`Windows Hello 设置失败: ${e?.message || String(e)}`)
-    } finally {
-      setIsSettingHello(false)
-    }
-  }
 
   useEffect(() => {
     const removeDb = window.electronAPI.key.onDbKeyStatus((payload: { message: string; level: number }) => {
@@ -193,31 +199,31 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
       }
     })
     const removeImage = window.electronAPI.key.onImageKeyStatus((payload: { message: string, percent?: number }) => {
-      let msg = payload.message;
-      let pct = payload.percent;
+      let msg = payload.message
+      let pct = payload.percent
 
       // 解析文本中的百分比
       if (pct === undefined) {
-        const match = msg.match(/\(([\d.]+)%\)/);
+        const match = msg.match(/\(([\d.]+)%\)/)
         if (match) {
-          pct = parseFloat(match[1]);
-          msg = msg.replace(/\s*\([\d.]+%\)/, '');
+          pct = parseFloat(match[1])
+          msg = msg.replace(/\s*\([\d.]+%\)/, '')
         } else {
           // 解析 "扫描进度 520/1301..." 格式
-          const progressMatch = msg.match(/扫描进度\s*(\d+)\/(\d+)/);
+          const progressMatch = msg.match(/扫描进度\s*(\d+)\/(\d+)/)
           if (progressMatch) {
-            const current = parseInt(progressMatch[1], 10);
-            const total = parseInt(progressMatch[2], 10);
-            if (total > 0) pct = (current / total) * 100;
+            const current = parseInt(progressMatch[1], 10)
+            const total = parseInt(progressMatch[2], 10)
+            if (total > 0) pct = (current / total) * 100
           }
         }
       }
 
-      setImageKeyStatus(msg);
+      setImageKeyStatus(msg)
       if (pct !== undefined) {
-        setImageKeyPercent(pct);
+        setImageKeyPercent(pct)
       } else if (msg.includes('启动多核') || msg.includes('定位') || msg.includes('准备')) {
-        setImageKeyPercent(0);
+        setImageKeyPercent(0)
       }
     })
     return () => {
@@ -336,12 +342,14 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showWxidSelect])
 
-  const imageStepIndex = steps.findIndex(step => step.id === 'image')
-  const securityStepIndex = steps.findIndex(step => step.id === 'security')
-  const currentStep = steps[stepIndex] ?? steps[0]
-  const imagePreCompletedAhead = isImageStepAutoCompleted && imageStepIndex >= 0 && stepIndex < imageStepIndex
-  const rootClassName = `welcome-page${isClosing ? ' is-closing' : ''}${standalone ? ' is-standalone' : ''}`
-  const showWindowControls = standalone
+  // === Helpers ===
+  async function sha256(message: string) {
+    const msgBuffer = new TextEncoder().encode(message)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    return hashHex
+  }
 
   const isStepCompleted = (index: number, stepId: SetupStepId): boolean => {
     if (index < stepIndex) return true
@@ -360,6 +368,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     return step.desc
   }
 
+  // === Window controls (standalone) ===
   const handleMinimize = () => {
     window.electronAPI.window.minimize()
   }
@@ -368,9 +377,37 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     window.electronAPI.window.close()
   }
 
+  // === Auth ===
+  const handleSetupHello = async () => {
+    if (!isWindows) {
+      setError('当前系统不支持 Windows Hello')
+      return
+    }
+    if (!authPassword || authPassword !== authConfirmPassword) {
+      setError('请先设置并确认应用密码，再开启 Windows Hello')
+      return
+    }
+
+    setIsSettingHello(true)
+    try {
+      const result = await window.electronAPI.auth.hello('请验证您的身份以开启 Windows Hello')
+      if (!result.success) {
+        setError(`Windows Hello 设置失败: ${result.error || '验证失败'}`)
+        return
+      }
+
+      setEnableHello(true)
+      setError('')
+    } catch (e: any) {
+      setError(`Windows Hello 设置失败: ${e?.message || String(e)}`)
+    } finally {
+      setIsSettingHello(false)
+    }
+  }
+
+  // === Db path ===
   const validatePath = (path: string): string | null => {
     if (!path) return null
-    // 检测中文字符和其他可能有问题的特殊字符
     if (/[\u4e00-\u9fa5]/.test(path)) {
       return DB_PATH_CHINESE_ERROR
     }
@@ -436,6 +473,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     }
   }
 
+  // === Cache path ===
   const handleSelectCachePath = async () => {
     try {
       const result = await dialog.openFile({
@@ -452,6 +490,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     }
   }
 
+  // === Wxid ===
   const handleScanWxid = async (silent = false) => {
     if (!dbPath) {
       if (!silent) setError('请先选择数据库目录')
@@ -464,7 +503,6 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
       const wxids = await window.electronAPI.dbPath.scanWxids(dbPath)
       setWxidOptions(wxids)
       if (wxids.length > 0) {
-        // 自动获取密钥后，始终优先选择最近活跃（modifiedTime 最新）的账号。
         const selectedWxid = pickLatestWxid(wxids)
         setWxid(selectedWxid || wxids[0].wxid)
         if (!silent) setError('')
@@ -500,6 +538,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     }
   }
 
+  // === Db key ===
   const handleAutoGetDbKey = async () => {
     if (isFetchingDbKey) return
     setShowDbKeyConfirm(true)
@@ -561,6 +600,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     handleAutoGetDbKey()
   }
 
+  // === Image key ===
   const handleAutoGetImageKey = async (
     source: ImageKeyResolveSource = 'manual-cache',
     options?: { silentError?: boolean }
@@ -645,6 +685,7 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     void handleAutoGetImageKey('prefetch-cache', { silentError: true })
   }, [dbPath, wxid, decryptKey])
 
+  // === Navigation ===
   const jumpToStep = (stepId: SetupStepId) => {
     const targetIndex = steps.findIndex(step => step.id === stepId)
     if (targetIndex >= 0) setStepIndex(targetIndex)
@@ -843,45 +884,42 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
     return `${year}-${month}-${day} ${hours}:${minutes}`
   }
 
+  // === Render ===
   if (isDbConnected) {
     return (
       <div className={rootClassName}>
-        <div className="welcome-container">
-          {showWindowControls && (
-            <div className="window-controls">
-              <button type="button" className="window-btn" onClick={handleMinimize} aria-label="最小化">
-                <Minus size={14} />
-              </button>
-              <button type="button" className="window-btn is-close" onClick={handleCloseWindow} aria-label="关闭">
-                <X size={14} />
-              </button>
-            </div>
-          )}
-          <div className="welcome-sidebar">
-            <div className="sidebar-header">
-              <img src="./logo.png" alt="WeLine" className="sidebar-logo" />
-              <div className="sidebar-brand">
-                <span className="brand-name">WeLine</span>
-                <span className="brand-tag">Connected</span>
+        {showWindowControls && (
+          <div className="window-controls">
+            <button type="button" className="window-btn" onClick={handleMinimize} aria-label="最小化">
+              <Minus size={14} />
+            </button>
+            <button type="button" className="window-btn is-close" onClick={handleCloseWindow} aria-label="关闭">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        <div className="welcome-shell is-success-shell">
+          <aside className="welcome-aside">
+            <div className="aside-brand">
+              <img src="./logo.png" alt="WeLine" className="aside-logo" />
+              <div className="aside-brand-meta">
+                <span className="aside-brand-name">WeLine</span>
+                <span className="aside-brand-tag">已连接 · Connected</span>
               </div>
             </div>
-
-            <div className="sidebar-spacer" style={{ flex: 1 }} />
-
-            <div className="sidebar-footer">
-              <ShieldCheck size={14} />
+            <div className="aside-spacer" />
+            <div className="aside-footer">
+              <ShieldCheck size={13} />
               <span>本地安全存储</span>
             </div>
-          </div>
+          </aside>
 
-          <div className="welcome-content success-content">
-            <div className="success-body">
-              <div className="success-icon">
-                <CheckCircle2 size={48} />
-              </div>
+          <main className="welcome-main is-success">
+            <div className="success-content">
+              <div className="success-icon"><CheckCircle2 size={36} /></div>
               <h1 className="success-title">配置已完成</h1>
               <p className="success-desc">数据库已连接，你可以直接进入首页使用全部功能。</p>
-
               <button
                 className="btn btn-primary btn-large"
                 onClick={() => {
@@ -898,72 +936,108 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                 进入首页 <ArrowRight size={18} />
               </button>
             </div>
-          </div>
+          </main>
         </div>
       </div>
     )
   }
 
+  const stepProgress = Math.min(100, ((stepIndex + 1) / steps.length) * 100)
+
   return (
     <div className={rootClassName}>
-      <div className="welcome-container">
-        {showWindowControls && (
-          <div className="window-controls">
-            <button type="button" className="window-btn" onClick={handleMinimize} aria-label="最小化">
-              <Minus size={14} />
-            </button>
-            <button type="button" className="window-btn is-close" onClick={handleCloseWindow} aria-label="关闭">
-              <X size={14} />
-            </button>
-          </div>
-        )}
-        <div className="welcome-sidebar">
-          <div className="sidebar-header">
-            <img src="./logo.png" alt="WeLine" className="sidebar-logo" />
-            <div className="sidebar-brand">
-              <span className="brand-name">WeLine</span>
-              <span className="brand-tag">Setup</span>
+      {showWindowControls && (
+        <div className="window-controls">
+          <button type="button" className="window-btn" onClick={handleMinimize} aria-label="最小化">
+            <Minus size={14} />
+          </button>
+          <button type="button" className="window-btn is-close" onClick={handleCloseWindow} aria-label="关闭">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      <div className="welcome-shell">
+        {/* === Sidebar === */}
+        <aside className="welcome-aside">
+          <div className="aside-brand">
+            <img src="./logo.png" alt="WeLine" className="aside-logo" />
+            <div className="aside-brand-meta">
+              <span className="aside-brand-name">WeLine</span>
+              <span className="aside-brand-tag">本地数据向导 · v4.3.7</span>
             </div>
           </div>
 
-          <div className="sidebar-nav">
-            {steps.map((step, index) => (
-              <div key={step.id} className={`nav-item ${index === stepIndex ? 'active' : ''} ${isStepCompleted(index, step.id) ? 'completed' : ''}`}>
-                <div className="nav-indicator">
-                  {isStepCompleted(index, step.id) ? <CheckCircle2 size={14} /> : <div className="dot" />}
+          <nav className="aside-nav" aria-label="配置步骤">
+            {steps.map((step, index) => {
+              const completed = isStepCompleted(index, step.id)
+              const active = index === stepIndex
+              const status = active ? 'active' : completed ? 'completed' : 'future'
+              return (
+                <div
+                  key={step.id}
+                  className={`aside-step ${status}`}
+                  onClick={() => jumpToStep(step.id)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="aside-step-dot">
+                    {completed
+                      ? <CheckCircle2 size={12} />
+                      : <span>{index + 1}</span>}
+                  </div>
+                  <div className="aside-step-title">{step.title}</div>
                 </div>
-                <div className="nav-info">
-                  <div className="nav-title">{step.title}</div>
-                  <div className="nav-desc">{resolveStepDesc(step)}</div>
-                  {step.id === 'image' && imagePreCompletedAhead && (
-                    <div className="nav-hint">已预先自动完成</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              )
+            })}
+          </nav>
 
-          <div className="sidebar-footer">
-            <ShieldCheck size={14} />
+          <div className="aside-footer">
+            <ShieldCheck size={13} />
             <span>数据仅在本地处理，不上传服务器</span>
           </div>
-        </div>
+        </aside>
 
-        <div className="welcome-content">
-          <div className="content-header">
-            <div>
-              <h2>{currentStep.title}</h2>
-              <p className="header-desc">{currentStep.desc}</p>
-              {isAddAccountMode && (
-                <p className="header-mode-tip">添加账号模式：其他步骤已沿用当前配置，只需重新获取数据库密钥。</p>
-              )}
-            </div>
+        {/* === Main === */}
+        <main className="welcome-main">
+          <header className="main-header">
+            <p className="main-eyebrow">第 {stepIndex + 1} 步 / 共 {steps.length} 步</p>
+            <h2>{currentStep.title}</h2>
+            <p className="main-subtitle">{resolveStepDesc(currentStep)}</p>
+            {isAddAccountMode && (
+              <p className="main-mode-tip">
+                <Sparkles size={13} />
+                添加账号模式：其他步骤已沿用当前配置，只需重新获取数据库密钥。
+              </p>
+            )}
+          </header>
+
+          <div className="main-progress">
+            <div className="main-progress-fill" style={{ width: `${stepProgress}%` }} />
           </div>
 
-          <div className="content-body">
+          <div className="main-body">
             {currentStep.id === 'intro' && (
-              <div className="intro-block">
-                {/* 内容移至底部 */}
+              <div className="intro">
+                <div className="intro-logo">
+                  <img src="./logo.png" alt="WeLine" />
+                </div>
+                <h1 className="intro-title">欢迎使用 WeLine</h1>
+                <p className="intro-tagline">
+                  本机微信数据的查看、分析与导出工具。点下一步开始 5 分钟配置，配置仅保存在你本机。
+                </p>
+                <div className="intro-features">
+                  {INTRO_FEATURES.map((feature, idx) => {
+                    const Icon = feature.Icon
+                    return (
+                      <div key={idx} className="feature-card">
+                        <div className="feature-card-icon"><Icon size={18} /></div>
+                        <div className="feature-card-title">{feature.title}</div>
+                        <div className="feature-card-desc">{feature.desc}</div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
@@ -981,13 +1055,14 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                 </div>
                 <div className="action-row">
                   <button className="btn btn-secondary" onClick={handleAutoDetectPath} disabled={isDetectingPath}>
-                    <FolderSearch size={16} /> {isDetectingPath ? '检测中...' : '自动检测'}
+                    <FolderSearch size={16} />
+                    {isDetectingPath ? '检测中...' : '自动检测'}
                   </button>
                   <button className="btn btn-secondary" onClick={handleSelectPath}>
-                    <FolderOpen size={16} /> 浏览...
+                    <FolderOpen size={16} />
+                    浏览...
                   </button>
                 </div>
-
                 <div className="field-hint">请选择微信-设置-存储位置对应的目录</div>
               </div>
             )}
@@ -1006,10 +1081,12 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                 </div>
                 <div className="action-row">
                   <button className="btn btn-secondary" onClick={handleSelectCachePath}>
-                    <FolderOpen size={16} /> 浏览
+                    <FolderOpen size={16} />
+                    浏览
                   </button>
                   <button className="btn btn-secondary" onClick={() => setCachePath('')}>
-                    <RotateCcw size={16} /> 重置默认
+                    <RotateCcw size={16} />
+                    重置默认
                   </button>
                 </div>
                 <div className="field-hint">用于头像、表情与图片缓存</div>
@@ -1030,32 +1107,34 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                     onChange={(e) => setWxid(e.target.value)}
                   />
                   {showWxidSelect && wxidOptions.length > 0 && (
-                      <div className="wxid-dropdown">
-                        {wxidOptions.map((opt) => (
-                            <button
-                                key={opt.wxid}
-                                type="button"
-                                className={`wxid-option ${opt.wxid === wxid ? 'active' : ''}`}
-                                onClick={() => {
-                                  setWxid(opt.wxid)
-                                  setShowWxidSelect(false)
-                                }}
-                            >
-                              <div className="wxid-profile">
-                                {opt.avatarUrl ? (
-                                    <img src={opt.avatarUrl} alt="avatar" className="wxid-avatar" />
-                                ) : (
-                                    <div className="wxid-avatar-fallback"><UserRound size={14}/></div>
-                                )}
-                                <div className="wxid-info">
-                                  <span className="wxid-nickname">{opt.nickname || opt.wxid}</span>
-                                  {opt.nickname && <span className="wxid-sub">{opt.wxid}</span>}
-                                </div>
+                    <div className="wxid-dropdown">
+                      {wxidOptions.map((opt) => (
+                        <button
+                          key={opt.wxid}
+                          type="button"
+                          className={`wxid-option ${opt.wxid === wxid ? 'active' : ''}`}
+                          onClick={() => {
+                            setWxid(opt.wxid)
+                            setShowWxidSelect(false)
+                          }}
+                        >
+                          <div className="wxid-profile">
+                            {opt.avatarUrl ? (
+                              <img src={opt.avatarUrl} alt="avatar" className="wxid-avatar" />
+                            ) : (
+                              <div className="wxid-avatar-fallback">
+                                <UserRound size={14} />
                               </div>
-                              <span className="wxid-time">{formatModifiedTime(opt.modifiedTime)}</span>
-                            </button>
-                        ))}
-                      </div>
+                            )}
+                            <div className="wxid-info">
+                              <span className="wxid-nickname">{opt.nickname || opt.wxid}</span>
+                              {opt.nickname && <span className="wxid-sub">{opt.wxid}</span>}
+                            </div>
+                          </div>
+                          <span className="wxid-time">{formatModifiedTime(opt.modifiedTime)}</span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -1068,7 +1147,12 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                     value={decryptKey}
                     onChange={(e) => setDecryptKey(e.target.value.trim())}
                   />
-                  <button type="button" className="toggle-btn" onClick={() => setShowDecryptKey(!showDecryptKey)}>
+                  <button
+                    type="button"
+                    className="toggle-btn"
+                    onClick={() => setShowDecryptKey(!showDecryptKey)}
+                    aria-label={showDecryptKey ? '隐藏密钥' : '显示密钥'}
+                  >
                     {showDecryptKey ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
@@ -1077,91 +1161,33 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                   {isManualStartPrompt ? (
                     <div className="manual-prompt">
                       <p>未能自动启动微信，请手动启动微信，看到登录窗口后点击下方确认</p>
-                      <button className="btn btn-primary" onClick={handleManualConfirm}>
+                      <button className="btn btn-primary btn-block" onClick={handleManualConfirm}>
                         我已看到登录窗口，继续
                       </button>
                     </div>
                   ) : (
-                    <button className="btn btn-secondary btn-block" onClick={handleAutoGetDbKey} disabled={isFetchingDbKey}>
+                    <button
+                      className="btn btn-secondary btn-block"
+                      onClick={handleAutoGetDbKey}
+                      disabled={isFetchingDbKey}
+                    >
                       {isFetchingDbKey ? '正在获取...' : '自动获取密钥'}
                     </button>
                   )}
                 </div>
 
-                {dbKeyStatus && <div className={`status-message ${isDbKeyReadyMessage(dbKeyStatus) ? 'is-success' : ''}`}>{dbKeyStatus}</div>}
+                {dbKeyStatus && (
+                  <div className={`status-message ${isDbKeyReadyMessage(dbKeyStatus) ? 'is-success' : ''}`}>
+                    {dbKeyStatus}
+                  </div>
+                )}
                 {!dbKeyStatus && !isFetchingDbKey && (
-                  <div className="field-hint">点击"自动获取密钥"后：若微信已登录将自动尝试内存扫描获取；若未登录则需先登录微信。无需每次都重新登录。</div>
+                  <div className="field-hint">
+                    点击"自动获取密钥"后：若微信已登录将自动尝试内存扫描获取；若未登录则需先登录微信。无需每次都重新登录。
+                  </div>
                 )}
                 {isAddAccountMode && !hasReacquiredDbKey && (
                   <div className="field-hint">添加账号模式下需先自动获取一次数据库密钥，才能完成并返回主窗口。</div>
-                )}
-              </div>
-            )}
-
-            {currentStep.id === 'security' && (
-              <div className="form-group">
-                <div className="security-toggle-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <div className="toggle-info">
-                    <label className="field-label" style={{ marginBottom: 0 }}>启用应用锁</label>
-                    <div className="field-hint">每次启动应用时需要验证密码</div>
-                  </div>
-                  <label className="switch">
-                    <input type="checkbox" checked={enableAuth} onChange={e => setEnableAuth(e.target.checked)} />
-                    <span className="switch-slider" />
-                  </label>
-                </div>
-
-                {enableAuth && (
-                  <div className="security-settings" style={{ marginTop: 20, padding: 16, backgroundColor: 'var(--bg-secondary)', borderRadius: 8 }}>
-                    <div className="form-group">
-                      <label className="field-label">应用密码</label>
-                      <input
-                        type="password"
-                        className="field-input"
-                        placeholder="请输入密码"
-                        value={authPassword}
-                        onChange={e => setAuthPassword(e.target.value)}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="field-label">确认密码</label>
-                      <input
-                        type="password"
-                        className="field-input"
-                        placeholder="请再次输入密码"
-                        value={authConfirmPassword}
-                        onChange={e => setAuthConfirmPassword(e.target.value)}
-                      />
-                      {authPassword && authConfirmPassword && authPassword !== authConfirmPassword && (
-                        <div className="error-text" style={{ color: '#ff4d4f', fontSize: 12, marginTop: 4 }}>两次密码不一致</div>
-                      )}
-                    </div>
-
-                    <div className="divider" style={{ margin: '20px 0', borderTop: '1px solid var(--border-color)' }}></div>
-
-                    <div className="security-toggle-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div className="toggle-info">
-                        <label className="field-label" style={{ marginBottom: 0 }}>Windows Hello</label>
-                        <div className="field-hint">使用面容、指纹或 PIN 码快速解锁</div>
-                      </div>
-
-                      {enableHello ? (
-                        <div style={{ color: '#52c41a', display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <CheckCircle2 size={16} /> 已开启
-                          <button className="btn btn-ghost btn-sm" onClick={() => setEnableHello(false)} style={{ padding: '2px 8px', height: 24, fontSize: 12 }}>关闭</button>
-                        </div>
-                      ) : (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          disabled={!helloAvailable || isSettingHello}
-                          onClick={handleSetupHello}
-                        >
-                          {isSettingHello ? '设置中...' : (helloAvailable ? '点击开启' : '不可用')}
-                        </button>
-                      )}
-                    </div>
-                    {!helloAvailable && <div className="field-hint warning"> 当前设备不支持 Windows Hello 或未设置 PIN 码</div>}
-                  </div>
                 )}
               </div>
             )}
@@ -1179,11 +1205,21 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                  <button className="btn btn-primary btn-block" onClick={() => handleAutoGetImageKey('manual-cache')} disabled={isFetchingImageKey} title="从本地缓存快速计算">
+                <div className="image-key-actions">
+                  <button
+                    className="btn btn-primary btn-block"
+                    onClick={() => handleAutoGetImageKey('manual-cache')}
+                    disabled={isFetchingImageKey}
+                    title="从本地缓存快速计算"
+                  >
                     {isFetchingImageKey ? '获取中...' : '缓存计算（推荐）'}
                   </button>
-                  <button className="btn btn-secondary btn-block" onClick={handleScanImageKeyFromMemory} disabled={isFetchingImageKey} title="扫描微信进程内存">
+                  <button
+                    className="btn btn-secondary btn-block"
+                    onClick={handleScanImageKeyFromMemory}
+                    disabled={isFetchingImageKey}
+                    title="扫描微信进程内存"
+                  >
                     {isFetchingImageKey ? '扫描中...' : '内存扫描'}
                   </button>
                 </div>
@@ -1195,19 +1231,103 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
                       {typeof imageKeyPercent === 'number' && Number.isFinite(imageKeyPercent) && (
                         <span className="status-text">{Math.max(0, Math.min(100, imageKeyPercent)).toFixed(1)}%</span>
                       )}
-                      <button className="btn btn-ghost btn-sm" onClick={handleCancelImageKey} style={{ marginLeft: 'auto', padding: '2px 10px', height: 24, fontSize: 12, color: '#999' }}>取消</button>
+                      <button
+                        className="btn btn-ghost btn-sm cancel-btn"
+                        onClick={handleCancelImageKey}
+                      >
+                        取消
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  imageKeyStatus && <div className="status-message" style={{ marginTop: '12px' }}>{imageKeyStatus}</div>
+                  imageKeyStatus && <div className="status-message">{imageKeyStatus}</div>
                 )}
 
-                <div className="field-hint" style={{ marginTop: '8px' }}>
+                <div className="field-hint">
                   图片密钥用于解密聊天图片，可选填。仅当"缓存计算 + 本地校验通过"时会自动跳过本步骤；若失败可使用内存扫描兜底，也可直接点击"下一步"跳过。
                 </div>
                 {isImageKeyVerified && (
-                  <div className="status-message is-success" style={{ marginTop: '8px' }}>
+                  <div className="status-message is-success">
                     当前密钥已通过缓存校验，可安全自动跳过图片密钥步骤。
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentStep.id === 'security' && (
+              <div className="form-group">
+                <div className="security-toggle-row">
+                  <div className="toggle-info">
+                    <span className="toggle-title">启用应用锁</span>
+                    <span className="toggle-hint">每次启动应用时需要验证密码</span>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={enableAuth}
+                      onChange={(e) => setEnableAuth(e.target.checked)}
+                    />
+                    <span className="switch-slider" />
+                  </label>
+                </div>
+
+                {enableAuth && (
+                  <div className="security-card">
+                    <div className="form-group">
+                      <label className="field-label">应用密码</label>
+                      <input
+                        type="password"
+                        className="field-input"
+                        placeholder="请输入密码"
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="field-label">确认密码</label>
+                      <input
+                        type="password"
+                        className="field-input"
+                        placeholder="请再次输入密码"
+                        value={authConfirmPassword}
+                        onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                      />
+                      {authPassword && authConfirmPassword && authPassword !== authConfirmPassword && (
+                        <div className="error-text">两次密码不一致</div>
+                      )}
+                    </div>
+
+                    <div className="security-card-divider" />
+
+                    <div className="security-toggle-row">
+                      <div className="toggle-info">
+                        <span className="toggle-title">Windows Hello</span>
+                        <span className="toggle-hint">使用面容、指纹或 PIN 码快速解锁</span>
+                      </div>
+
+                      {enableHello ? (
+                        <div className="hello-enabled">
+                          <CheckCircle2 size={14} />
+                          <span>已开启</span>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEnableHello(false)}>
+                            关闭
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          disabled={!helloAvailable || isSettingHello}
+                          onClick={handleSetupHello}
+                        >
+                          {isSettingHello ? '设置中...' : (helloAvailable ? '点击开启' : '不可用')}
+                        </button>
+                      )}
+                    </div>
+                    {!helloAvailable && (
+                      <div className="field-hint warning">
+                        当前设备不支持 Windows Hello 或未设置 PIN 码
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1215,8 +1335,8 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
           </div>
 
           {error && (
-            <div className="error-message">
-              <div className="error-text">{error}</div>
+            <div className="main-error">
+              <div>{error}</div>
               {isMac && error === lastDbKeyError && (
                 <button type="button" className="error-link-btn" onClick={openMacKeyFaq}>
                   查看 macOS 获取密钥排障指引
@@ -1225,48 +1345,61 @@ function WelcomePage({ standalone = false }: WelcomePageProps) {
             </div>
           )}
 
-          {currentStep.id === 'intro' && (
-            <div className="intro-footer">
-              <p>接下来的几个步骤将引导你连接本地微信数据库。</p>
-              <p>WeLine 需要访问你的本地数据文件以提供分析与导出功能。</p>
-            </div>
-          )}
-
-          <div className="content-actions">
-            <button className="btn btn-ghost" onClick={handleBack} disabled={stepIndex === 0 || isAddAccountMode}>
-              <ArrowLeft size={16} /> 上一步
+          <div className="main-actions">
+            <button
+              className="btn btn-ghost"
+              onClick={handleBack}
+              disabled={stepIndex === 0 || isAddAccountMode}
+            >
+              <ArrowLeft size={16} />
+              上一步
             </button>
 
             {isAddAccountMode ? (
-              <button className="btn btn-primary" onClick={handleConnect} disabled={isConnecting || !canGoNext()}>
-                {isConnecting ? '连接中...' : '完成并返回'} <ArrowRight size={16} />
+              <button
+                className="btn btn-primary"
+                onClick={handleConnect}
+                disabled={isConnecting || !canGoNext()}
+              >
+                {isConnecting ? '连接中...' : '完成并返回'}
+                <ArrowRight size={16} />
               </button>
             ) : stepIndex < steps.length - 1 ? (
-              <button className="btn btn-primary" onClick={handleNext} disabled={!canGoNext()}>
-                下一步 <ArrowRight size={16} />
+              <button
+                className="btn btn-primary"
+                onClick={handleNext}
+                disabled={!canGoNext()}
+              >
+                下一步
+                <ArrowRight size={16} />
               </button>
             ) : (
-              <button className="btn btn-primary" onClick={handleConnect} disabled={isConnecting || !canGoNext()}>
-                {isConnecting ? '连接中...' : '完成配置'} <ArrowRight size={16} />
+              <button
+                className="btn btn-primary"
+                onClick={handleConnect}
+                disabled={isConnecting || !canGoNext()}
+              >
+                {isConnecting ? '连接中...' : '完成配置'}
+                <ArrowRight size={16} />
               </button>
             )}
           </div>
-        </div>
+        </main>
+      </div>
 
-        <ConfirmDialog
-            open={showDbKeyConfirm}
-            title="开始获取数据库密钥"
-            message={`当开始获取后 WeLine 将会执行准备操作。
+      <ConfirmDialog
+        open={showDbKeyConfirm}
+        title="开始获取数据库密钥"
+        message={`当开始获取后 WeLine 将会执行准备操作。
 ${isLinux ? `
 【⚠️ Linux 用户特别注意】
-如果您在微信里勾选了“自动登录”，请务必先关闭自动登录，然后再点击下方确认！
+如果您在微信里勾选了"自动登录"，请务必先关闭自动登录，然后再点击下方确认！
 （因为授权弹窗输入密码需要时间，若自动登录太快会导致获取失败）
 ` : ''}
 当 WeLine 内的提示条变为绿色显示允许登录或看到来自 WeLine 的登录通知时，请在手机上确认登录微信。`}
-            onConfirm={handleDbKeyConfirm}
-            onCancel={() => setShowDbKeyConfirm(false)}
-        />
-      </div>
+        onConfirm={handleDbKeyConfirm}
+        onCancel={() => setShowDbKeyConfirm(false)}
+      />
     </div>
   )
 }
