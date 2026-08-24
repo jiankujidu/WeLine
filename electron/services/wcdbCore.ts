@@ -661,6 +661,10 @@ export class WcdbCore {
   async initialize(): Promise<boolean> {
     if (this.initialized) return true
 
+    // 保护校验软错误（-101 / -102 / -1006）：改名 / 重打包构建会触发，核心 WCDB 功能不受影响，
+    // 按警告忽略并继续初始化。InitProtection 与 wcdb_init 共用同一份白名单。
+    const SOFT_PROTECTION_ERRORS = new Set([-101, -102, -1006])
+
     try {
       this.koffi = require('koffi')
       const dllPath = this.getDllPath()
@@ -721,7 +725,6 @@ export class WcdbCore {
       // 软错误（-101/-102/-1006）仅记录警告，不阻塞初始化——改名/重打包后 DLL 内部校验可能失败，
       // 但核心功能（wcdb_init / wcdb_open_account 等）仍可正常工作。
       // 仅硬错误（manifest/signature/hash 失败 -2201~-2212）才阻止继续。
-      const SOFT_PROTECTION_ERRORS = new Set([-101, -102, -1006])
       let protectionWarning: string | null = null
 
       try {
@@ -742,7 +745,7 @@ export class WcdbCore {
         let bestFailCode: number | null = null
         const scoreFailCode = (code: number): number => {
           if (code >= -2212 && code <= -2201) return 0 // manifest/signature/hash failures
-          if (code === -102 || code === -101 || code === -1006) return 1
+          if (SOFT_PROTECTION_ERRORS.has(code)) return 1
           return 2
         }
         for (const resPath of resourcePaths) {
@@ -1257,7 +1260,7 @@ export class WcdbCore {
         // 但核心 WCDB 功能（wcdb_open_account 等）仍可正常工作。
         // 与 InitProtection 的处理保持一致——按警告忽略并继续初始化，
         // 避免发布版一启动就弹出“WeLine 启动失败 / 错误码:-1006”。
-        if (initResult === -101 || initResult === -102 || initResult === -1006) {
+        if (SOFT_PROTECTION_ERRORS.has(initResult)) {
           this.writeLog(`[bootstrap] wcdb_init 返回保护软错误 ${initResult}，忽略并继续初始化`, true)
         } else {
           console.error('WCDB 初始化失败:', initResult)
